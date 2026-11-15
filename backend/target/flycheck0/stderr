@@ -1,0 +1,56 @@
+   0.039314800s  INFO prepare_target{force=false package_id=backend v0.1.0 (E:\code\rust\learna\backend) target="backend"}: cargo::core::compiler::fingerprint: fingerprint error for backend v0.1.0 (E:\code\rust\learna\backend)/Check { test: false }/TargetInner { name: "backend", doc: true, ..: with_path("E:\\code\\rust\\learna\\backend\\src\\main.rs", Edition2024) }
+   0.039431400s  INFO prepare_target{force=false package_id=backend v0.1.0 (E:\code\rust\learna\backend) target="backend"}: cargo::core::compiler::fingerprint:     err: failed to read `E:\code\rust\learna\backend\target\debug\.fingerprint\backend-4367669d1733a054\bin-backend`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_libgit2_prerelease
+  11: <unknown>
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: git_midx_writer_dump
+  16: git_filter_source_repo
+  17: git_midx_writer_dump
+  18: BaseThreadInitThunk
+  19: RtlUserThreadStart
+   0.064462000s  INFO prepare_target{force=false package_id=backend v0.1.0 (E:\code\rust\learna\backend) target="backend"}: cargo::core::compiler::fingerprint: fingerprint error for backend v0.1.0 (E:\code\rust\learna\backend)/Check { test: true }/TargetInner { name: "backend", doc: true, ..: with_path("E:\\code\\rust\\learna\\backend\\src\\main.rs", Edition2024) }
+   0.064511200s  INFO prepare_target{force=false package_id=backend v0.1.0 (E:\code\rust\learna\backend) target="backend"}: cargo::core::compiler::fingerprint:     err: failed to read `E:\code\rust\learna\backend\target\debug\.fingerprint\backend-36660ae1a5b92671\test-bin-backend`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_libgit2_prerelease
+  11: <unknown>
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: git_midx_writer_dump
+  16: git_filter_source_repo
+  17: git_midx_writer_dump
+  18: BaseThreadInitThunk
+  19: RtlUserThreadStart
+    Checking backend v0.1.0 (E:\code\rust\learna\backend)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.86s
