@@ -1,0 +1,36 @@
+# PR 标题 Conventional Commits 检查
+# 与 CONTRIBUTING.md 提交规范一致：type(scope): subject
+# PR 标题不符时该 check 变红，合并前会被 Required status check 拦下
+name: Semantic PR
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+# Actions 收紧：只需读 PR 元数据，无需写权限
+permissions:
+  pull-requests: read
+
+jobs:
+  check-title:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # 与 CONTRIBUTING.md 的 type 白名单保持一致
+          types: |
+            feat
+            fix
+            docs
+            chore
+            refactor
+            test
+            build
+            ci
+          # scope 可选（module 或服务名），不强制
+          requireScope: false

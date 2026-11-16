@@ -1,0 +1,23 @@
+# PR 标签自动化：按改动路径自动打标签（规则见 .github/labeler.yml）
+name: PR Labeler
+
+on:
+  pull_request_target:
+
+# Actions 收紧：读 contents（拿变更文件列表）+ 写 PR 标签
+# 说明：labeler 只通过 API 读取 PR 的文件列表，不 checkout、不执行 PR 代码，
+# 因此这里使用 pull_request_target 是官方推荐且安全的用法（fork PR 也能打标签）
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          # false = 只增不删，人工打的标签不会被移除
+          sync-labels: false

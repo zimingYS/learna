@@ -1,0 +1,40 @@
+# PR 标签规则（actions/labeler v5 语法）
+# 注意：标签需预先存在于仓库，创建命令见 CONTRIBUTING.md 或交付说明
+# 同一 PR 命中多条规则时会打上多个标签
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file: "backend/**"
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: "frontend/**"
+
+ai-service:
+  - changed-files:
+      - any-glob-to-any-file: "ai-service/**"
+
+deploy:
+  - changed-files:
+      - any-glob-to-any-file: "deploy/**"
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "*.md"
+          - "LICENSE"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: ".github/**"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/Cargo.lock"
+          - "**/package-lock.json"
+          - "**/pyproject.toml"
+          - "**/uv.lock"
+          - "backend/Cargo.toml"
+          - "frontend/package.json"

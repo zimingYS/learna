@@ -129,3 +129,7 @@ cd frontend && npm install && npm run dev
 - **backend**：`cargo check` + `cargo test`
 - **frontend**：`npm ci` + `npm run build`
 - **ai-service**：`uv sync` + `python -m compileall app`
+
+## 许可证
+
+本项目采用 [PolyForm Noncommercial License 1.0.0](./LICENSE)：允许非商业目的的使用、修改与分发，**不允许商业使用**。商业授权请联系项目作者。
