@@ -1,0 +1,27 @@
+root = true
+
+[*]
+# 文件编码统
+charset = utf-8
+# 换行符统一使用 LF
+end_of_line = lf
+# 文件末尾自动插入一个换行符
+insert_final_newline = true
+# 删除行尾空格
+trim_trailing_whitespace=true
+# 缩进使用空格
+indent_style = space
+# 默认缩进宽度为 4
+indent_size = 4
+
+[*.{js,mjs,ts,vue,json,yml,yaml,html,css,scss,cff}]
+# 上述格式缩进宽度为 2
+indent_size = 2
+
+[*.md]
+# Markdown不删除行尾空格
+trim_trailing_whitespace = false
+
+[Makefile]
+# Makefile必须使用Tab缩进
+indent_style = tab

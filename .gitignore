@@ -1,3 +1,4 @@
+# 环境变量与密钥证书，禁止提交敏感凭据
 .env
 .env.*
 !.env.example
@@ -5,6 +6,7 @@
 *.key
 *.p12
 
+# Node/前端依赖与构建产物
 node_modules/
 dist/
 dist-ssr/
@@ -14,11 +16,13 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
+# 数据库备份与本地数据文件
 *.dump
 *.sql.gz
 *.sqlite
 *.db
 
+# IDE、编辑器与操作系统生成文件
 .idea/
 .vscode/*
 !.vscode/extensions.json
@@ -27,10 +31,22 @@ Thumbs.db
 *.swp
 *.suo
 
+# Rust 编译产物与备份文件
 /target/
 **/target/
 *.rs.bk
 
+# 日志文件
 logs/
 **/logs/
 *.log
+
+# Python 虚拟环境、字节码缓存与测试缓存
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 本地文件存储
+data/
