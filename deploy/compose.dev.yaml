@@ -1,0 +1,28 @@
+# 开发模式专用：仅启动 PostgreSQL
+# 用法：docker compose -f deploy/compose.dev.yaml up -d
+# 项目名必须显式钉死（name 字段）：compose 默认以所在目录名做项目名，
+# 与其他 deploy/ 目录的项目会撞名并被合并进同一个 stack。
+# 正式部署的 compose.yaml 也应各自钉 name: learna。
+name: learna-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: learna-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: learna
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: learna
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U learna -d learna"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:
