@@ -28,6 +28,10 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     labels: ["dependencies", "chore"]
+    # typescript 7 重构了包导出（./lib/tsc 移除），vue-tsc 尚不兼容；major 升级须人工验证
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
