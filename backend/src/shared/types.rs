@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 /// 请求 ID
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct RequestId(String);
+pub struct RequestId(pub String);
 
 impl RequestId {
     /// 生成新的随机请求 ID（UUID v4）

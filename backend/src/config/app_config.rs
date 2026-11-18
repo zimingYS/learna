@@ -48,7 +48,10 @@ fn require_var(name: &str) -> AppResult<String> {
 
 /// 读取可选环境变量，空字符串视为未配置
 fn optional_var(name: &str) -> Option<String> {
-    env::var(name).ok().filter(|value| !value.trim().is_empty())
+    env::var(name)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.trim().is_empty())
 }
 
 /// 读取并解析数字类型环境变量
@@ -60,5 +63,5 @@ where
 
     value
         .parse()
-        .map_err(|_| AppError::Internal(format!("invalid {name}: {value:?}（expect {expected}）")))
+        .map_err(|_| AppError::Internal(format!("invalid {name}: {value:?}(expect {expected})")))
 }
