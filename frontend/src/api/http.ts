@@ -1,0 +1,107 @@
+import axios, {type AxiosRequestConfig} from "axios";
+
+// 后端统一响应信封
+export interface ApiResponse<T> {
+  code: string;
+  message: string;
+  data: T | null;
+  request_id: string;
+}
+
+// 统一 API 错误对象
+interface ApiErrorOptions {
+  code?: string;
+  request_id?: string;
+  status?: number;
+}
+
+export class ApiError extends Error {
+  readonly code?: string;
+  readonly request_id?: string;
+  readonly status?: number;
+
+  constructor(message: string, options: ApiErrorOptions = {}) {
+    super(message);
+
+    this.name = "ApiError";
+    this.code = options.code;
+    this.request_id = options.request_id;
+    this.status = options.status;
+  }
+}
+
+// Axios 实例
+const http = axios.create({
+  baseURL: "/api",
+  timeout: 12_000,
+});
+
+// 判断未知数据是否为普通对象
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// 从未知对象中安全读取字符串字段
+function getStringField(
+  record: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  const value = record?.[key];
+
+  return typeof value === "string" ? value : undefined;
+}
+
+// 统一请求出口
+export async function request<T>(
+  config: AxiosRequestConfig,
+): Promise<T> {
+  try {
+    const response = await http.request<ApiResponse<T>>(config);
+    const envelope = response.data;
+
+    if (envelope.code !== "200") {
+      throw new ApiError(envelope.message?.trim() || "请求失败", {
+        code: envelope.code,
+        request_id: envelope.request_id,
+        status: response.status,
+      });
+    }
+
+    return envelope.data as T;
+  } catch (error: unknown) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    // 处理 Axios HTTP 错误和网络错误
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+
+      const body = isRecord(error.response?.data)
+        ? error.response?.data
+        : undefined;
+
+      const bodyMessage = getStringField(body, "message");
+
+      // HTTP 响应时优先使用状态描述
+      const fallbackMessage =
+        status !== undefined
+          ? error.response?.statusText?.trim() || `HTTP ${status}`
+          : error.message || "网络请求失败";
+
+      throw new ApiError(bodyMessage?.trim() ? bodyMessage : fallbackMessage, {
+        code: getStringField(body, "code"),
+        request_id: getStringField(body, "request_id"),
+        status,
+      });
+    }
+
+    if (error instanceof Error) {
+      throw new ApiError(error.message);
+    }
+
+    throw new ApiError("未知请求错误");
+  }
+}
+
+export default http;
