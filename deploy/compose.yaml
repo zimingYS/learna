@@ -16,6 +16,8 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    ports:
+      - "5433:5432"
 
   # 后端
   backend:

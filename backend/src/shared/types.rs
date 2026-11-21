@@ -1,5 +1,8 @@
 //! 公共类型
 
+use axum::extract::Request;
+use axum::middleware::Next;
+use axum::response::Response;
 use serde::{Deserialize, Serialize};
 
 /// 请求 ID
@@ -44,4 +47,10 @@ impl std::fmt::Display for RequestId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
     }
+}
+
+pub async fn request_id_middleware(mut req: Request, next: Next) -> Response {
+    let id = RequestId::new();
+    req.extensions_mut().insert(id);
+    next.run(req).await
 }

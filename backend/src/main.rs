@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
-use backend::app_state::{AppState, build_router};
+use backend::app_state::AppState;
 use backend::config::AppConfig;
 use backend::infrastructure::ai_client::AiClient;
 use backend::infrastructure::database;
 use backend::infrastructure::telemetry::init_tracing;
+use backend::router::routes;
 use backend::shared::{AppError, AppResult};
 
 #[tokio::main]
@@ -20,6 +21,8 @@ async fn main() -> AppResult<()> {
 
     // 创建数据库池
     let db = database::create_pool(&cfg)?;
+    // 执行数据库迁移应用
+    database::run_migrations(&db).await?;
 
     // 创建AI客户端
     let ai_client = AiClient::new(
@@ -34,7 +37,7 @@ async fn main() -> AppResult<()> {
     };
 
     // 路由
-    let router = build_router(state);
+    let router = routes::build_router(state);
     // 监听
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
