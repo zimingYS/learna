@@ -5,7 +5,7 @@ use axum::{Router, middleware};
 
 pub fn build_router(state: AppState) -> Router {
     Router::new()
-        .nest("/", health::router())
+        .merge(health::router())
         .nest("/auth", auth::router())
         .with_state(state)
         .layer(middleware::from_fn(request_id_middleware))
