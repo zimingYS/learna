@@ -43,6 +43,14 @@ pub enum AppError {
     /// 内部错误（500）：非预期故障
     #[error("internal error: {0}")]
     Internal(String),
+
+    /// 哈希错误
+    #[error("hash: {0}")]
+    Hash(String),
+
+    /// Token异常
+    #[error("token: {0}")]
+    Token(String),
 }
 
 impl AppError {
@@ -57,6 +65,8 @@ impl AppError {
             Self::RateLimited(_) => StatusCode::TOO_MANY_REQUESTS,
             Self::Upstream(_) => StatusCode::BAD_GATEWAY,
             Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Hash(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Token(_) => StatusCode::UNAUTHORIZED,
         }
     }
 
@@ -71,6 +81,8 @@ impl AppError {
             Self::RateLimited(_) => "RATE_LIMITED",
             Self::Upstream(_) => "UPSTREAM_ERROR",
             Self::Internal(_) => "INTERNAL_ERROR",
+            Self::Hash(_) => "HASH_ERROR",
+            Self::Token(_) => "TOKEN_ERROR",
         }
     }
 }

@@ -1,6 +1,6 @@
-pub mod auth;
 pub mod ai_task;
 pub mod audit;
+pub mod auth;
 pub mod knowledge;
 pub mod learning_record;
 pub mod library;

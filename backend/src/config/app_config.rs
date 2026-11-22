@@ -15,6 +15,7 @@ pub struct AppConfig {
     pub encryption_master_key: Option<String>,
     pub storage_provider: String,
     pub storage_root_dir: PathBuf,
+    pub jwt_secret: String,
 }
 
 impl AppConfig {
@@ -31,6 +32,7 @@ impl AppConfig {
             encryption_master_key: optional_var("ENCRYPTION_MASTER_KEY"),
             storage_provider: require_var("STORAGE_PROVIDER")?,
             storage_root_dir: PathBuf::from(require_var("STORAGE_ROOT_DIR")?),
+            jwt_secret: require_var("JWT_SECRET")?,
         })
     }
 }

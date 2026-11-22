@@ -36,6 +36,7 @@ services:
       STORAGE_PROVIDER: local
       STORAGE_ROOT_DIR: /data/uploads
       RUST_LOG: ${RUST_LOG:-info}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
     restart: unless-stopped
 
   # AI服务器
