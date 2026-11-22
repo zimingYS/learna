@@ -1,31 +1,22 @@
 use crate::config::AppConfig;
 use crate::modules::auth::dto::{AuthResponse, LoginRequest, RegisterRequest, UserResponse};
+use crate::shared::types::Claims;
 use crate::shared::{AppError, AppResult};
 use bcrypt::{DEFAULT_COST, hash, verify};
 use jsonwebtoken::{EncodingKey, Header, encode};
-use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use sqlx::types::chrono::Utc;
 
 /// JWT 有效时长
 pub const JWT_EXPIRATION: i64 = 7 * 24 * 3600;
 
-/// JWT 载荷
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    /// 用户 ID
-    sub: String,
-    /// 过期时间
-    exp: usize,
-}
-
 /// 数据库用户记录
 #[derive(Debug, sqlx::FromRow)]
-struct UserRow {
-    id: String,
-    email: String,
-    password_hash: String,
-    display_name: String,
+pub struct UserRow {
+    pub(crate) id: String,
+    pub(crate) email: String,
+    pub(crate) password_hash: String,
+    pub(crate) display_name: String,
 }
 
 /// 生成 JWT

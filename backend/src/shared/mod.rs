@@ -1,6 +1,7 @@
 //! 共享层
 
 pub mod error;
+pub mod middleware;
 pub mod response;
 pub mod types;
 
