@@ -50,13 +50,12 @@ http.interceptors.request.use((config) => {
   return config;
 })
 
-// 请求拦截器，统一处理认证失败
+// 响应拦截器，统一处理认证失败
 http.interceptors.response.use(
   (response) => response,
 
   (error: unknown) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      error.config?.headers?.get("Authorization");
       const requestUrl = error.config?.url ?? "";
 
       // 登录和注册接口不参与 Token 过期跳转
