@@ -30,7 +30,7 @@ export interface AuthResponse {
 export async function login(data: LoginRequest): Promise<AuthResponse> {
   return request<AuthResponse>({
     url: "/auth/login",
-    method: "post",
+    method: "POST",
     data,
   });
 }
@@ -39,7 +39,7 @@ export async function login(data: LoginRequest): Promise<AuthResponse> {
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
   return request<AuthResponse>({
     url: "/auth/register",
-    method: "post",
+    method: "POST",
     data,
   });
 }
