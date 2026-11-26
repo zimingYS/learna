@@ -64,11 +64,11 @@
 
 ### 4.1 交付报告
 
-任务完成后必须按 `docs/工程规范/交付报告模板.md` 提供完整交付报告（九节：Task Summary / Modified Files / Implementation Details / Code Quality / Database and API Changes / Test Results / Known Issues / Design Deviations / Next Step）。
+任务完成后必须按 `docs/工程规范/交付报告模板.md` 提供完整交付报告（九节：任务摘要 / 修改文件 / 实现细节 / 代码质量 / 数据库与 API 变更 / 测试结果 / 已知问题 / 设计偏差 / 下一步）。
 
-- **测试结果必须真实执行**，区分 Passed / Failed / Skipped / Not Run，禁止未跑先报。
-- **Database and API Changes** 无变化时明确写「无」。
-- **Next Step** 只建议、不擅自开工。
+- **测试结果必须真实执行**，区分通过 / 失败 / 跳过 / 未执行，禁止未跑先报。
+- **数据库与 API 变更**无变化时明确写「无」。
+- **下一步**只建议、不擅自开工。
 
 ### 4.2 代码交付
 
