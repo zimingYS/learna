@@ -84,7 +84,8 @@ if [ "$MODE" = "dev" ]; then
 else
   if [ "$FAILS" -eq 0 ]; then
     if [ "$FULL" -eq 1 ]; then
-      (cd "$ROOT/deploy" && docker compose up -d --build) >/dev/null 2>&1 \
+      # --env-file 显式指向根 .env：compose 项目目录是 deploy/，默认读不到根 .env
+      (cd "$ROOT/deploy" && docker compose --env-file "$ROOT/.env" up -d --build) >/dev/null 2>&1 \
         && ok "部署自动化" "全栈已启动（compose.yaml）" || fail "部署自动化" "compose up 失败"
     else
       (cd "$ROOT/deploy" && docker compose -f compose.dev.yaml up -d) >/dev/null 2>&1 \
