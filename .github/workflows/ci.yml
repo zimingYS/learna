@@ -11,6 +11,25 @@ permissions:
   contents: read
 
 jobs:
+  # 汇总作业：check 名固定为 CI，对齐分支保护的必需检查（单点闸门）
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [backend, frontend, ai-service]
+    if: always()
+    steps:
+      - name: Check job results
+        run: |
+          echo "backend: ${{ needs.backend.result }}"
+          echo "frontend: ${{ needs.frontend.result }}"
+          echo "ai-service: ${{ needs.ai-service.result }}"
+          if [ "${{ needs.backend.result }}" != "success" ] \
+            || [ "${{ needs.frontend.result }}" != "success" ] \
+            || [ "${{ needs.ai-service.result }}" != "success" ]; then
+            exit 1
+          fi
+
   backend:
     name: backend (Rust)
     runs-on: ubuntu-latest
