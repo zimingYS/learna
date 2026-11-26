@@ -58,7 +58,6 @@ learna/
 ├── deploy/                   # 部署配置
 │   ├── compose.yaml          # 正式运行（Docker Compose）
 │   ├── compose.dev.yaml      # 开发模式（仅数据库）
-│   ├── docker/               # 各服务 Dockerfile
 │   └── nginx/                # 反向代理配置
 ├── docs/                     # 文档（见下方文档地图）
 ├── scripts/                  # 工程脚本
@@ -108,6 +107,17 @@ cd frontend && npm install && npm run dev
 | ai-service（FastAPI） | 8001 | 仅内网，浏览器不可直连 |
 | PostgreSQL | 5432 | 仅服务端访问 |
 
+生产 Compose 的宿主机映射端口可配置：前端 `${HTTP_PORT:-80}`、PostgreSQL `${POSTGRES_HOST_PORT:-5433}`（容器内端口不变）。
+
+### 生产部署（Docker Compose）
+
+```bash
+# POSTGRES_PASSWORD 与 JWT_SECRET 必须在 .env 显式配置（无默认值，缺失会直接报错）
+docker compose --env-file .env -f deploy/compose.yaml up -d --build
+```
+
+`--env-file .env` 不能省略：Compose 项目目录是 `deploy/`，默认读不到仓库根目录的 `.env`。
+
 ## 文档地图
 
 | 目录 / 文件 | 性质 | 说明 |
@@ -136,14 +146,23 @@ cd frontend && npm install && npm run dev
 | 文件存储 | 本地文件系统（Storage 抽象，预留对象存储） |
 | 部署 | Docker Compose + Nginx |
 
+## 测试
+
+- 统一入口：`bash scripts/test/test.sh`（backend / ai-service / frontend 三栈）。
+- backend 集成测试跑在真实 PostgreSQL 上（`sqlx::test` 为每个用例独立建库），需要 `DATABASE_URL`；脚本会自动从根 `.env` 读取，也可手动导出后直接 `cargo test`。
+- 前端业务测试位于 `frontend/tests/`（Vitest：`npm run test`），Python 测试位于 `ai-service/tests/`（pytest）。
+
 ## CI
 
-推送与 Pull Request 会触发 GitHub Actions（`.github/workflows/ci.yml`）：
+推送与 Pull Request 会触发 GitHub Actions（`.github/workflows/ci.yml`）。三个构建 job 全绿后由汇总闸门 **CI** 放行（分支保护的必需检查）：
 
-- **backend**：`cargo check` + `cargo test`
-- **frontend**：`npm ci` + `npm run build`
-- **ai-service**：`uv sync` + `python -m compileall app`
-- **CI**：汇总闸门作业，三个构建 job 全绿才通过（分支保护必需检查）
+| Job | 闸门 |
+|---|---|
+| backend (Rust) | `cargo fmt --check` + `cargo clippy -D warnings` + `cargo check` + `cargo test`（含 PostgreSQL 集成测试，CI 内置 postgres 服务） |
+| frontend (Vue) | `npm run lint`（ESLint）+ `npm run test`（Vitest）+ `npm run build`（vue-tsc 类型检查 + 构建） |
+| ai-service (Python) | `uv sync --locked`（锁文件校验）+ `ruff format --check` / `ruff check` + `python -m compileall` + `pytest` |
+
+本地等价命令：`bash scripts/check/check.sh`（格式 / 静态检查）、`bash scripts/test/test.sh`（三栈测试）。
 
 ## 许可证
 
