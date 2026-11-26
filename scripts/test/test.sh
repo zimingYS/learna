@@ -21,6 +21,11 @@ run() { # run <label> <cmd...>
 
 test_backend() {
   cd "$ROOT/backend" || exit 1
+  # 集成测试需要 DATABASE_URL，未设置时从根 .env 读取（与 db 脚本同口径）
+  if [ -z "${DATABASE_URL:-}" ] && [ -f "$ROOT/.env" ]; then
+    DATABASE_URL="$(grep -E "^DATABASE_URL=.+" "$ROOT/.env" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")"
+    export DATABASE_URL
+  fi
   run "backend: cargo test" cargo test --locked
 }
 
