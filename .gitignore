@@ -48,8 +48,10 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
-# 本地文件存储
+# 本地文件存储与数据库备份
 data/
+backups/
 
 # WorkBuddy 本地工作数据（记忆/日志，含个人内容，严禁提交）
 /.workbuddy/
+/.oil-diff/
