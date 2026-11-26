@@ -1,0 +1,19 @@
+#!/bin/sh
+# pre-commit：敏感文件拦截 + 快速质量检查（--fast 跳过 clippy/vue-tsc）
+# 临时跳过：LEARNA_SKIP_HOOKS=1 git commit ...
+[ "${LEARNA_SKIP_HOOKS:-0}" = "1" ] && exit 0
+
+# 拦截 .env 与密钥类文件
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+for f in $STAGED; do
+  case "$f" in
+    *.env|*/.env|.env.*|*.pem|*.key|*id_rsa*)
+      echo "pre-commit: 拒绝提交敏感文件 $f" >&2
+      exit 1 ;;
+  esac
+done
+
+bash scripts/check/check.sh --fast || {
+  echo "pre-commit: 质量检查未通过（修复后重试，或 LEARNA_SKIP_HOOKS=1 临时跳过）" >&2
+  exit 1
+}

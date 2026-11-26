@@ -1,0 +1,9 @@
+#!/bin/sh
+# pre-push：推送前跑三栈测试
+# 临时跳过：LEARNA_SKIP_HOOKS=1 git push ...
+[ "${LEARNA_SKIP_HOOKS:-0}" = "1" ] && exit 0
+
+bash scripts/test/test.sh || {
+  echo "pre-push: 测试未通过（修复后重试，或 LEARNA_SKIP_HOOKS=1 临时跳过）" >&2
+  exit 1
+}
