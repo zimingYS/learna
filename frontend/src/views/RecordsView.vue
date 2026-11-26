@@ -288,6 +288,7 @@ import {
   updateRecord
 } from "../api/records.ts";
 import {ApiError} from "../api/http.ts";
+import {buildRecordPayload} from "./records-form.ts";
 
 const PAGE_SIZE = 10;
 
@@ -370,40 +371,21 @@ function formatDate(value: string): string {
   }).format(date);
 }
 
-// 构建请求参数
+// 构建请求参数（校验规则在 records-form 纯函数中）
 function buildPayload(): CreateRecordInput | null {
-  const title = form.title.value.trim();
+  const result = buildRecordPayload({
+    title: form.title.value,
+    content: form.content.value,
+    subject: form.subject.value,
+    duration_minutes: form.duration_minutes.value,
+  });
 
-  if (!title) {
-    errorMessage.value = "请输入学习标题";
+  if (!result.ok) {
+    errorMessage.value = result.error;
     return null;
   }
 
-  const payload: CreateRecordInput = {title};
-  const content = form.content.value.trim();
-  const subject = form.subject.value.trim();
-  const duration = form.duration_minutes.value.trim();
-
-  if (content) {
-    payload.content = content;
-  }
-
-  if (subject) {
-    payload.subject = subject;
-  }
-
-  if (duration !== "") {
-    const minutes = Number(duration);
-
-    if (!Number.isSafeInteger(minutes) || minutes < 0) {
-      errorMessage.value = "学习时长必须是非负整数";
-      return null;
-    }
-
-    payload.duration_minutes = minutes;
-  }
-
-  return payload;
+  return result.payload;
 }
 
 // 加载学习记录
