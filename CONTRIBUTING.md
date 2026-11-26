@@ -121,6 +121,7 @@ feat: add feature
 - 不要提交无关文件、临时文件、构建产物或敏感信息。
 - 避免使用含义模糊的提交信息。
 - 提交前应检查变更内容，确保没有意外修改。
+- 仓库提供 Git 钩子辅助检查（`bash scripts/git/install-hooks.sh` 启用）：`pre-commit` 拦截敏感文件并跑快速质量检查，`commit-msg` 校验提交格式，`pre-push` 跑三栈测试。紧急情况可用 `LEARNA_SKIP_HOOKS=1` 临时跳过，事后须补跑 `scripts/check/check.sh` 与 `scripts/test/test.sh`。
 
 ## 3. Pull Request 流程
 
