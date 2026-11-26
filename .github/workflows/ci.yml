@@ -44,9 +44,17 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Lint
+        run: cargo clippy --locked -- -D warnings
 
       - name: Check
         run: cargo check --locked
@@ -102,5 +110,14 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: Format
+        run: uv run --with ruff ruff format --check app tests
+
+      - name: Lint
+        run: uv run --with ruff ruff check app tests
+
       - name: Syntax check
         run: uv run python -m compileall app
+
+      - name: Test
+        run: uv run pytest

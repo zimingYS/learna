@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import logging
 import secrets
+
 from fastapi import Depends, Header, HTTPException
+
 from app.config.settings import Settings, get_settings
 from app.schemas.base import ApiResponse
 
@@ -21,7 +24,7 @@ class InternalAuthError(HTTPException):
 
 async def require_internal_token(
     x_internal_token: str | None = Header(default=None, alias=INTERNAL_TOKEN_HEADER),
-    settings: Settings = Depends(get_settings),
+    settings: Settings = Depends(get_settings),  # noqa: B008  FastAPI 依赖注入标准写法
 ) -> None:
     expected = settings.ai_service_token
 

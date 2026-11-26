@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 
+from app.api.internal.auth import install_internal_auth_handler
 from app.api.internal.router import router as internal_router
-from app.api.internal.auth import install_internal_auth_handler, require_internal_token
 
 logging.basicConfig(
     level=logging.INFO,

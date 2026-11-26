@@ -1,5 +1,6 @@
 import uuid
 from typing import Any, Final
+
 from pydantic import BaseModel, ConfigDict, Field
 
 SCHEMA_VERSION: Final[str] = "v1"

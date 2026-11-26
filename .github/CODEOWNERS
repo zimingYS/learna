@@ -1,23 +1,31 @@
 # 代码所有权（Code Owners）
 # 语法：路径模式 + 负责人；匹配路径的 PR 变更强制要求对应负责人审查。
-# 说明：单人仓库阶段用于敏感路径标记；多人协作启用 "Require review from Code Owners" 后生效。
+# 生效条件：仓库分支保护启用 "Require review from Code Owners"。
 
-# 默认所有变更的负责人
-* @zimingYS
+# ---- 模块负责人 ----
+/frontend/           @zimingYS
+/backend/            @zimingYS
+/ai-service/         @zimingYS
+/deploy/             @zimingYS
+/docs/               @zimingYS
+/scripts/            @zimingYS
 
-# ---- 敏感路径：改动需重点审查 ----
+# ---- 敏感路径（改动需重点审查） ----
 
 # CI/CD 与仓库治理配置
-/.github/ @zimingYS
+/.github/            @zimingYS
 
 # 部署编排、容器与反向代理
-/deploy/ @zimingYS
+/deploy/             @zimingYS
 
 # 数据库迁移（影响持久化数据结构）
 /backend/migrations/ @zimingYS
 
 # 环境变量模板（凭据清单）
-/.env.example @zimingYS
+/.env.example        @zimingYS
 
 # 许可证
-/LICENSE @zimingYS
+/LICENSE             @zimingYS
+
+# ---- 默认兜底 ----
+*                    @zimingYS
