@@ -30,11 +30,51 @@ export class ApiError extends Error {
   }
 }
 
+export const TOKEN_KEY = "learna_token";
+export const USER_KEY = "learna_user";
+
 // Axios 实例
 const http = axios.create({
   baseURL: "/api",
   timeout: 12_000,
 });
+
+// 请求拦截器, 自动注入JWT
+http.interceptors.request.use((config) => {
+  const token = localStorage.getItem(TOKEN_KEY);
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+})
+
+// 响应拦截器，统一处理认证失败
+http.interceptors.response.use(
+  (response) => response,
+
+  (error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      const requestUrl = error.config?.url ?? "";
+
+      // 登录和注册接口不参与 Token 过期跳转
+      const isAuthRequest = requestUrl.endsWith("/auth/login") || requestUrl.endsWith("/auth/register");
+
+      if (!isAuthRequest) {
+        // 清理认证缓存
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+
+        // 整页跳转，让 Pinia 重新初始化
+        window.location.href = "/login";
+      }
+    }
+
+    // 向上抛出错误
+    return Promise.reject(error);
+  }
+)
 
 // 判断未知数据是否为普通对象
 function isRecord(value: unknown): value is Record<string, unknown> {
