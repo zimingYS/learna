@@ -10,6 +10,12 @@ const routes: RouteRecordRaw[] = [
     redirect: "/dashboard",
   },
   {
+    path: "/login",
+    name: "login",
+    component: () => import("../views/LoginView.vue"),
+    meta: {blank: true}
+  },
+  {
     path: "/dashboard",
     name: "dashboard",
     component: () => import("../views/DashboardView.vue"),
