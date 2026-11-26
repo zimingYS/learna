@@ -7,6 +7,7 @@
 STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 for f in $STAGED; do
   case "$f" in
+    .env.example) ;;  # 入库模板，放行
     *.env|*/.env|.env.*|*.pem|*.key|*id_rsa*)
       echo "pre-commit: 拒绝提交敏感文件 $f" >&2
       exit 1 ;;
