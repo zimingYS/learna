@@ -1,0 +1,32 @@
+# GitHub 自动生成 Release Notes 的分类配置（Release Notes 配置）
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+      - dependencies
+    authors:
+      - dependabot
+  categories:
+    - title: 新增
+      labels:
+        - feat
+        - enhancement
+    - title: 修复
+      labels:
+        - fix
+        - bug
+    - title: 变更
+      labels:
+        - refactor
+        - perf
+        - change
+    - title: 工程与文档
+      labels:
+        - ci
+        - chore
+        - build
+        - docs
+        - test
+    - title: 其他
+      labels:
+        - "*"
