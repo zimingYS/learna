@@ -3,6 +3,7 @@ import {
   createWebHistory,
   type RouteRecordRaw,
 } from "vue-router";
+import {TOKEN_KEY} from "../api/http";
 
 const routes: RouteRecordRaw[] = [
   {
@@ -55,6 +56,13 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+// 全局守卫：未登录一律进登录页
+router.beforeEach((to) => {
+  if (!localStorage.getItem(TOKEN_KEY) && to.name !== "login") {
+    return {name: "login"};
+  }
 });
 
 export default router;
