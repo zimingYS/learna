@@ -1,9 +1,23 @@
 # Learna 领域模型与 ERD 设计文档
 
-**版本：** Domain Model & ERD V1.0\
-**状态：** 领域模型评审后设计稿\
+**版本：** Domain Model & ERD V1.1\
+**状态：** 领域模型评审后设计稿（V1.1 为契约设计阶段的授权补列修订）\
 **适用范围：** Learna 首版多用户学习管理平台\
 **设计依据：** Learna PRD V1.0 与领域模型评审确认结果
+
+**V1.1 变更记录（2026-11-27）**
+
+| 变更 | 位置 | 依据 |
+|---|---|---|
+| `ProjectGoal` 增 `parent_goal_id`（自引用，上限两层） | §5.1 | 契约决策 D-06；ADR-005 |
+| `LearningTask` 增 `stage_id`（可空 FK） | §5.1 | 契约决策 D-05；ADR-005 |
+| `LearningTask` 增 `deleted_at`（唯一软删表） | §5.1、§8 | 契约决策 D-17；ADR-006 |
+| `LearningProject` 状态枚举补 `draft`（六值） | §9 | 契约决策 D-16；ADR-005 |
+| §8 删除策略按「是否已参与执行」分层收窄 | §8、§8.1 | ADR-006 |
+| §7 索引建议补 `stage_id` 与软删过滤方向 | §7 | 契约设计；ADR-007 |
+| §12 待补项第 5 条改为已移交 | §12 | 契约决策 D-20 |
+
+本次修订**只做已授权补列与表述收窄**，不改变任何既有实体、关系与业务不变量。
 
 ------------------------------------------------------------------------
 
@@ -293,8 +307,9 @@ erDiagram
 ## 5. 核心实体数据字典
 
 以下字段名采用 snake_case。所有业务表建议统一包含
-`id`、`created_at`、`updated_at`；需要软删除的表额外包含
-`deleted_at`。时间统一使用带时区语义的时间戳；业务日期使用
+`id`、`created_at`、`updated_at`。**软删除列 `deleted_at` 仅
+`LearningTask` 需要**（V1.1 收窄，见 §8）：其余对象要么物理删除，要么以状态
+/ 归档表达退场，不引入 `deleted_at` 过滤成本。时间统一使用带时区语义的时间戳；业务日期使用
 DATE。数据库具体类型以目标数据库为准。
 
 ### 5.1 身份与项目规划
@@ -362,6 +377,12 @@ DATE。数据库具体类型以目标数据库为准。
   target_definition   JSONB          结构化目标定义；关键字段应另设列
   status              VARCHAR(20)    active / achieved / cancelled
   target_at           TIMESTAMPTZ    NULL
+  parent_goal_id      UUID           FK -\> ProjectGoal，可空自引用；
+                                     仅两层（主目标 / 子目标）
+  ---------------------------------------------------------------------
+
+`parent_goal_id` 为 V1.1 补列：`NULL` 表示主目标，非空表示子目标。服务层须保证
+同项目内、不得自引用、不得成环、层级上限两层（PRD §4.5「一个主要目标及多个子目标」）。
 
 #### Roadmap
 
@@ -442,6 +463,8 @@ roadmap（可用部分唯一索引实现）。
 
   milestone_id            UUID                    FK -\> Milestone，可空
 
+  stage_id                UUID                    FK -\> Stage，可空
+
   title                   VARCHAR(200)            NOT NULL
 
   description             TEXT                    NULL
@@ -459,9 +482,15 @@ roadmap（可用部分唯一索引实现）。
   completed_at            TIMESTAMPTZ             NULL
 
   created_source          VARCHAR(20)             user / ai / template
+
+  deleted_at              TIMESTAMPTZ             NULL；软删除标记
   -----------------------------------------------------------------------
 
-`milestone_id` 可空，支持不设置阶段的简单项目。
+`milestone_id` 可空，支持不设置阶段的简单项目。`stage_id` 为 V1.1
+补列，允许任务直挂阶段（不设里程碑）；两者同时存在时，阶段须与里程碑所属阶段一致（服务层校验）。
+
+`deleted_at` 为 V1.1 补列：**全库唯一需要软删除的表**。任务承载执行历史
+（`completed_at`），删除后行保留但不再参与任何查询与计数。其余对象按 §8 分层处理。
 
 #### TaskDependency
 
@@ -1005,6 +1034,10 @@ outbox 流程中保持一致。
 
   LearningTask               `(project_id, due_at)`                        截止任务查询
 
+  LearningTask               `(project_id, stage_id)`                      阶段下任务与解挂范围
+
+  LearningTask               `(project_id, milestone_id)`                  里程碑下任务与影响面计数
+
   TaskDependency             `(depends_on_task_id)`                        反向依赖查询
 
   LearningContent            `(owner_id, content_type, status)`            用户内容列表
@@ -1044,15 +1077,21 @@ ReviewItem 建立部分唯一索引，避免同一上下文重复启用同类型
 对标题/描述使用全文检索；相似度提示可后续评估 pg_trgm
 或向量检索，不应在首版将其变为创建阻断。
 
+**V1.1 补充**：所有 `LearningTask` 索引建议加 `WHERE deleted_at IS NULL`
+构成部分索引，与「软删行不参与列表查询、依赖环路检测、影响面计数、结构解挂」的契约规则一致（ADR-007 §6）。新增的
+`(project_id, stage_id)` 与 `(project_id, milestone_id)` 服务于两个高频场景：按阶段 / 里程碑筛选任务，以及删除上层结构时计算影响面与解挂范围。
+
 ------------------------------------------------------------------------
 
 ## 8. 删除、归档与数据保留策略
 
   对象                       默认操作               说明
   -------------------------- ---------------------- ----------------------------------
-  LearningProject            归档                   默认不物理删除
-  Roadmap                    标记 superseded        保留路线历史
-  Stage / Milestone / Task   软删除或取消           保留执行历史引用
+  LearningProject            归档 / draft 物理删除  非 draft 只能归档或走受控 purge
+  Roadmap                    标记 superseded /     已确认路线不可删除
+                             draft 物理删除
+  Stage / Milestone          仅 draft 路线可删     已确认结构不提供删除，用状态动作表达
+  LearningTask               软删除（deleted_at）  保留执行历史引用，不参与查询与计数
   LearningContent            归档                   若被项目引用，不允许直接物理删除
   ProjectContent             解除关联/归档          不删除共享内容
   LearningSession            保留                   更正需保留审计历史
@@ -1061,6 +1100,17 @@ ReviewItem 建立部分唯一索引，避免同一上下文重复启用同类型
   ReviewRecord               保留历史               不覆盖历史复习
   ScheduledActivity          取消/删除计划          不影响 LearningSession
   ChangeProposal             保留状态历史           便于追踪 AI 建议
+
+**分层原则（V1.1 新增，依据 ADR-006）**：删除语义由「该对象**是否已参与执行**」决定，不由对象类型决定。
+
+| 层 | 判据 | 对象 | 语义 | 理由 |
+|---|---|---|---|---|
+| L1 编辑区 | 容器未生效（`draft`） | draft 项目 / draft 路线及其下 stage、milestone | **物理删除** | 从未参与执行，无历史可损 |
+| L2 已生效结构 | 容器已 confirm | active / superseded 路线内的 stage、milestone | **不提供删除** | 结构是承诺；调整意图用状态动作（skip）表达 |
+| L3 原子执行单元 | 自身承载 `completed_at` | LearningTask | **软删除**（唯一软删对象） | 执行历史须保留可引用 |
+| L4 成果 | 达成事实 | achieved 目标、completed / archived 项目 | **禁止删除** | 删除后不可追溯；用状态 / 归档替代 |
+
+「任务永不随上层结构消失」的准确表述是「不随**上层结构**（路线 / 阶段 / 里程碑）消失」：项目是任务的归属根（`project_id` NOT NULL），项目级删除会连带删任务。
 
 ### 8.1 彻底删除项目的推荐事务流程
 
@@ -1076,7 +1126,11 @@ ReviewItem 建立部分唯一索引，避免同一上下文重复启用同类型
 9.  写入审计事件，完成项目删除。
 10. 通过后台任务清理无引用附件或临时资源。
 
-建议首版优先实现归档，不急于提供彻底删除项目的复杂级联能力。
+**v1 落地范围（V1.1 新增）**：上述 10 步中，v1 实现第 1、2、4、5、6 步；
+第 3 步的影响面展示降级为删除接口返回 `409` 并携带 `{ impact: { milestones, tasks } }` 计数；
+第 7、8、10 步在 v1 无对象可处理（学习记录属 P1 未设计，派生调度与附件清理尚未设计）；
+第 9 步的审计事件暂无存储表，以结构化 WARN 日志落地。
+删除入口分两条：`status=draft` 走普通 `DELETE`，其余状态走需重输项目名的受控 `purge`。详见 ADR-006。
 
 ------------------------------------------------------------------------
 
@@ -1087,8 +1141,8 @@ ReviewItem 建立部分唯一索引，避免同一上下文重复启用同类型
   -----------------------------------------------------------------------
   对象                                建议状态
   ----------------------------------- -----------------------------------
-  LearningProject                     active / paused / completed /
-                                      archived / deleting
+  LearningProject                     draft / active / paused /
+                                      completed / archived / deleting
 
   Roadmap                             draft / active / superseded
 
@@ -1117,6 +1171,10 @@ ReviewItem 建立部分唯一索引，避免同一上下文重复启用同类型
   -----------------------------------------------------------------------
 
 状态机迁移必须通过领域服务执行。前端不能任意写入状态。
+
+`LearningProject` 的 `draft` 为 V1.1 补入（PRD §4.3 五态 + ERD `deleting` 合并）。
+v1 的常规流程只产生前五个值；`deleting` 仅由受控 `purge` 事务内部写入、随事务结束消失，
+任何常规写操作置 `deleting` 必须被拒绝，否则会产生无法恢复的僵尸项目。
 
 ------------------------------------------------------------------------
 
@@ -1211,7 +1269,8 @@ service。
     等。
 3.  **语言学习内容扩展模型**：词形、词性、释义、例句、发音、词族及语言专属复习策略。
 4.  **学习活动计时规则**：暂停、跨午夜、手动补录、有效时长修正和审计。
-5.  **项目删除的最终产品交互**：彻底删除时是否提供删除主要归属学习记录的显式选项。
+5.  **项目删除时学习记录的处置**（契约决策 D-20，已移交 P1）：v1 的 `purge`
+    只删规划域数据；`LearningSession` 设计时须决定「主要归属学习记录」是一并删除还是解挂保留为个人历史。
 6.  **个人总体掌握算法**：证据权重、时间衰减、冲突处理、置信度校准。
 7.  **复习共享的具体语义**：共享仅作为证据，还是允许用户将复习结果转化为目标项目的评价输入。
 8.  **数据隐私与附件授权**：证据跨项目查看的权限、撤销机制及健康数据授权边界。
