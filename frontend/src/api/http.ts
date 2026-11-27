@@ -76,6 +76,15 @@ http.interceptors.response.use(
   }
 )
 
+// 统一把请求异常转成可直接展示的文案
+export function describeError(error: unknown): string {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+
+  return "请求失败，请稍后重试";
+}
+
 // 判断未知数据是否为普通对象
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

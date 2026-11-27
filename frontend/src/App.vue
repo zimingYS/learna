@@ -9,6 +9,48 @@ const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 
+// 侧栏导航：图标路径与 docs/产品需求/设计稿/UI概念图-首页仪表盘.png 保持同一线性风格
+const navItems: { to: string; label: string; paths: string[] }[] = [
+  { to: "/dashboard", label: "首页", paths: ["m3 10.5 9-7 9 7", "M5 9.5V20h14V9.5"] },
+  {
+    to: "/projects",
+    label: "学习项目",
+    paths: [
+      "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z",
+    ],
+  },
+  {
+    to: "/plans",
+    label: "学习计划",
+    paths: [
+      "M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z",
+      "M8 3v4M16 3v4M4 10h16",
+    ],
+  },
+  {
+    to: "/records",
+    label: "学习记录",
+    paths: [
+      "M4 19.5A2.5 2.5 0 0 1 6.5 17H20",
+      "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z",
+    ],
+  },
+  {
+    to: "/roadmaps",
+    label: "路线图",
+    paths: ["m9 4 6 2 6-2v12l-6 2-6-2-6 2V6Z", "M9 4v12M15 6v12"],
+  },
+  { to: "/reports", label: "报告", paths: ["M6 20v-6M12 20V6M18 20v-9", "M3 20h18"] },
+  {
+    to: "/settings",
+    label: "设置",
+    paths: [
+      "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
+      "M10.3 3h3.4l.4 2.2 2 1.2 2.1-.8 1.7 2.9-1.6 1.6v2.4l1.6 1.6-1.7 2.9-2.1-.8-2 1.2-.4 2.2h-3.4l-.4-2.2-2-1.2-2.1.8-1.7-2.9 1.6-1.6v-2.4L3.1 8.5l1.7-2.9 2.1.8 2-1.2Z",
+    ],
+  },
+];
+
 // 退出登录
 async function handleLogout(): Promise<void> {
   authStore.logout();
@@ -22,12 +64,21 @@ async function handleLogout(): Promise<void> {
     <template v-if="!route.meta.blank">
       <aside class="sidebar">
         <nav class="sidebar-nav">
-          <RouterLink to="/dashboard">总览</RouterLink>
-          <RouterLink to="/records">学习记录</RouterLink>
-          <RouterLink to="/roadmaps">路线图</RouterLink>
-          <RouterLink to="/plans">计划</RouterLink>
-          <RouterLink to="/reports">报告</RouterLink>
-          <RouterLink to="/settings">设置</RouterLink>
+          <RouterLink v-for="item in navItems" :key="item.to" :to="item.to">
+            <svg
+              aria-hidden="true"
+              class="nav-icon"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.7"
+              viewBox="0 0 24 24"
+            >
+              <path v-for="path in item.paths" :key="path" :d="path"/>
+            </svg>
+            <span>{{ item.label }}</span>
+          </RouterLink>
         </nav>
 
         <!-- 登录状态 -->
@@ -151,6 +202,7 @@ async function handleLogout(): Promise<void> {
 .sidebar-nav a {
   display: flex;
   align-items: center;
+  gap: 11px;
 
   min-height: 44px;
   padding: 0 14px;
@@ -165,6 +217,15 @@ async function handleLogout(): Promise<void> {
   transition:
     background-color 0.2s ease,
     color 0.2s ease;
+}
+
+.nav-icon {
+  flex-shrink: 0;
+
+  width: 18px;
+  height: 18px;
+
+  opacity: 0.85;
 }
 
 /* 鼠标悬停 */
