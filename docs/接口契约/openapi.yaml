@@ -1,14 +1,20 @@
 openapi: 3.1.0
 info:
   title: Learna API
-  version: "1.1.0"
+  version: "1.4.0"
   description: |
     Learna 接口契约（已确认接口）。
 
     - 全局规范见 docs/接口契约/README.md；业务目录见 docs/接口契约/接口清单.md。
     - `/api/v1/records` 为**过渡实现**（x-learna-status: interim），不是正式 LearningSession 契约。
     - 学习规划模块（projects / goals / roadmaps / stages / milestones / tasks）为**已设计、未实现**
-      （x-learna-status: designed），依据见 docs/接口契约/设计记录/学习规划模块契约设计.md。
+      （x-learna-status: designed），依据见 docs/接口契约/设计记录/学习规划模块契约设计.md；
+      该模块 23 项决策已全部落定（ADR-005 / ADR-006 / ADR-007），无待决策项。
+    - 删除语义按四层划分（ADR-006）：draft 容器级物理删除、已生效结构不提供删除、任务软删除、
+      成果对象禁止删除。带子项的删除默认 409 并返回影响面，需显式 `?cascade=true`。
+    - 状态迁移统一规则（ADR-007）：允许跳过中间态、允许回退、终态之间不直转、同态提交幂等。
+    - **契约最小承诺**（ADR-007）：`completion_rule` / `target_definition` 等无生产者的 JSONB 字段
+      不进契约；软删除标记 `deleted_at` 不对外暴露；列表默认序固定，不提供 `sort` 参数。
     - 其余未确认业务接口（learning-sessions / mastery / reviews / AI 提案等）不收录于此。
   license:
     name: PolyForm Noncommercial 1.0.0
@@ -211,7 +217,7 @@ paths:
           $ref: "#/components/responses/NotFound"
 
   # ==================== 学习规划模块（已设计，未实现） ====================
-  # 统一标记 x-learna-status: designed；待决策端点不收录（见设计记录 §10）。
+  # 统一标记 x-learna-status: designed；已设计端点全部收录，无 ❓ 端点（设计记录 §10）。
 
   /api/v1/projects:
     x-learna-module: learning-planning
@@ -219,16 +225,23 @@ paths:
     get:
       tags: [projects]
       summary: 项目列表
-      description: "默认排除已归档（PRD §4.3）；排序固定 updated_at DESC（ERD §7 索引建议）；传 status=archived 可查归档项目。"
+      description: "默认排除已归档（PRD §4.3，D-15）；排序固定 updated_at DESC, id DESC（ERD §7 索引建议）。查归档项目须显式传 include_archived=true。"
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
         - name: status
           in: query
           required: false
-          description: 按项目状态过滤
+          description: 按项目状态过滤（单值；不支持多值，以免破坏 (owner_id, status, updated_at DESC) 索引）
           schema:
             $ref: "#/components/schemas/ProjectStatus"
+        - name: include_archived
+          in: query
+          required: false
+          description: 为 true 时结果包含 archived 项目（与 status 互不排斥，取交集）
+          schema:
+            type: boolean
+            default: false
       responses:
         "200":
           description: 分页列表
@@ -244,7 +257,7 @@ paths:
       tags: [projects]
       summary: 创建项目
       description: "初始状态 draft（PRD §4.3）。"
-      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5 第 4 项）"
       requestBody:
         required: true
         content:
@@ -287,7 +300,8 @@ paths:
       summary: 部分更新项目
       description: |
         字段语义按 ADR-002 三态（缺失＝不变、null＝置空、值＝更新）；跨模块落地范围待统一（接口清单 §5.2）。
-        状态不可经 PATCH 修改，必须走动作端点。deadline_type=fixed 时修改 deadline_at 返回 422（特殊确认流程待决策 D-04）。
+        状态不可经 PATCH 修改，必须走动作端点。deadline_type=fixed 时修改 deadline_at 返回 422，
+        须改走 POST /projects/{id}/extend-deadline（D-04）。
       requestBody:
         required: true
         content:
@@ -307,6 +321,30 @@ paths:
           $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [projects]
+      summary: 删除项目（仅草稿，级联物理删除）
+      description: |
+        仅 `status=draft` 允许，级联**物理删除**全部规划数据（goal / roadmap / stage / milestone / task /
+        goal_stage / task_dependency），单事务完成（D-02a / ADR-006）。
+
+        已实施项目（active / paused / completed / archived）返回 409：首选归档（`POST .../archive`）；
+        确需销毁时调用 `POST /projects/{project_id}/purge` 并重输项目名。
+
+        草稿项目不因存在子数据而拒绝（D-03）：草稿内子数据均为编辑中空壳，故本端点不需要 `cascade` 参数。
+      responses:
+        "200":
+          description: 删除成功（data 为 null）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /api/v1/projects/{project_id}/activate:
     x-learna-module: learning-planning
@@ -442,6 +480,77 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /api/v1/projects/{project_id}/extend-deadline:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    post:
+      tags: [projects]
+      summary: 修改 fixed 截止日期（特殊确认流程）
+      description: |
+        ERD §5.1「fixed 日期修改必须走特殊确认流程」的落地形态（D-04 已决策）。
+        仅对 deadline_type=fixed 的项目有效；必须提供原因，服务端写审计事件。
+        非 fixed 项目改期走 PATCH /projects/{id}。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExtendDeadlineRequest"
+      responses:
+        "200":
+          description: 截止日期已更新
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}/purge:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    post:
+      tags: [projects]
+      summary: 强制删除项目（任意状态，需重输项目名）
+      description: |
+        已实施项目的销毁入口（D-02b / ERD §8.1）。与 `DELETE /projects/{id}` 的区别：
+        后者只删草稿且幂等；本端点接受任意状态，但要求 `confirm_name` 与项目 `name` 完全一致，
+        不一致返回 422（模拟 GitHub 删仓库的二次确认）。
+
+        事务内流程：`status=deleting` 加行锁拦截并发写 → 级联物理删除规划域数据 → 删除项目行 →
+        落结构化快照日志（含被删对象计数）。`deleting` 不持久可见。
+
+        **v1 只删规划域数据**：`purge` 不触及学习记录（LearningSession 未设计；该处置选项 D-20 已移交 P1）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurgeProjectRequest"
+      responses:
+        "200":
+          description: 删除成功（data 为 null）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
   /api/v1/projects/{project_id}/goals:
     x-learna-module: learning-planning
     x-learna-status: designed
@@ -450,7 +559,7 @@ paths:
     get:
       tags: [goals]
       summary: 项目目标列表
-      description: "排序无 ERD 依据，暂用 created_at DESC（待决策 D-14）。"
+      description: "排序固定 created_at ASC, id ASC（无索引依据，量级小；不提供 sort 参数，D-14）。"
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
@@ -469,7 +578,7 @@ paths:
       tags: [goals]
       summary: 创建项目目标
       description: "初始状态 active（ERD §5.1）。"
-      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5 第 4 项）"
       requestBody:
         required: true
         content:
@@ -512,8 +621,10 @@ paths:
           $ref: "#/components/responses/NotFound"
     patch:
       tags: [goals]
-      summary: 部分更新目标（含 active → achieved / cancelled）
-      description: "achieved / cancelled 不可回退到 active（恢复语义待决策 D-07）；非法迁移返回 409。"
+      summary: 部分更新目标（含状态变更）
+      description: |
+        状态边（D-07b）：`active → achieved / cancelled`；`achieved → active`、`cancelled → active`（误判修正）。
+        `achieved → cancelled` 返回 409（须先回 active 再取消，保留判定的两步痕迹）；其余迁移 409。
       requestBody:
         required: true
         content:
@@ -535,6 +646,27 @@ paths:
           $ref: "#/components/responses/Conflict"
         "422":
           $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [goals]
+      summary: 删除目标（achieved 拒绝）
+      description: |
+        物理删除目标，并在同一事务内删除其 GoalStage 关联行（关联行不是业务对象，D-07a）。
+
+        `status=achieved` 返回 409：达成是成果事实，删除后不可追溯；如需清理展示，保留目标并改状态。
+        `active` / `cancelled` 允许删除（「建错了」或「不做了」）。
+      responses:
+        "200":
+          description: 删除成功（data 为 null）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /api/v1/projects/{project_id}/goals/{goal_id}/stages:
     x-learna-module: learning-planning
@@ -557,52 +689,33 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
-
-  /api/v1/projects/{project_id}/goals/{goal_id}/stages/{stage_id}:
-    x-learna-module: learning-planning
-    x-learna-status: designed
-    parameters:
-      - $ref: "#/components/parameters/ProjectId"
-      - $ref: "#/components/parameters/GoalId"
-      - $ref: "#/components/parameters/StageId"
     put:
       tags: [goals]
-      summary: 建立或更新目标-阶段关联（幂等）
-      description: "复合主键 (goal_id, stage_id) 决定幂等语义；目标与阶段须同属该项目。"
+      summary: 整体替换目标-阶段关联集合
+      description: |
+        以 goal 为主语的批量写入：请求体给出该目标的完整关联集合，服务端在单事务内
+        删除旧关联行后写入新集合（D-13）。传空数组即清空全部关联。
+        集合内 stage_id 不得重复，且所有阶段须与目标同属该项目；跨项目或重复返回 422。
+        提交相同集合同样返回 200 且不改数据（幂等）。
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpsertGoalStageRequest"
+              $ref: "#/components/schemas/ReplaceGoalStageLinksRequest"
       responses:
         "200":
-          description: 关联已写入
+          description: 替换成功，返回新的关联集合
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GoalStageEnvelope"
+                $ref: "#/components/schemas/GoalStageListEnvelope"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
-    delete:
-      tags: [goals]
-      summary: 解除目标-阶段关联
-      description: "仅删除关联行，不删除目标或阶段。"
-      responses:
-        "200":
-          description: 解除成功
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/EmptyEnvelope"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          $ref: "#/components/responses/NotFound"
 
   /api/v1/projects/{project_id}/roadmaps:
     x-learna-module: learning-planning
@@ -631,7 +744,7 @@ paths:
       tags: [roadmaps]
       summary: 创建路线草稿
       description: "version 由服务端按项目自增；status 初始 draft。"
-      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5 第 4 项）"
       requestBody:
         required: true
         content:
@@ -697,6 +810,32 @@ paths:
           $ref: "#/components/responses/Conflict"
         "422":
           $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [roadmaps]
+      summary: 删除草稿路线（级联物理删除）
+      description: |
+        仅 `status=draft` 允许（D-12 / ADR-006）；`active` / `superseded` 返回 409——已确认路线是不可变历史。
+
+        级联：物理删除其下 stage / milestone、删除 goal_stage 关联行；其下任务**解挂保留**
+        （`stage_id` / `milestone_id` 置 NULL，任务行不删）。子项存在时须显式 `?cascade=true`，
+        否则返回 409 并在 `data` 中给出影响面计数（D-21）。
+
+        版本号分配为 `MAX(version)+1`，删除后空档允许复用（不承载已确认历史）。
+      parameters:
+        - $ref: "#/components/parameters/Cascade"
+      responses:
+        "200":
+          description: 删除成功（data 为 null）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ConflictWithImpact"
 
   /api/v1/projects/{project_id}/roadmaps/{roadmap_id}/confirm:
     x-learna-module: learning-planning
@@ -749,7 +888,7 @@ paths:
       tags: [stages]
       summary: 创建阶段
       description: "sequence_no 省略时追加到该路线末尾；status 初始 pending。"
-      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5 第 4 项）"
       requestBody:
         required: true
         content:
@@ -820,11 +959,18 @@ paths:
           $ref: "#/components/responses/ValidationError"
     delete:
       tags: [stages]
-      summary: 删除阶段（软删除）
-      description: "仅 draft 路线允许删除（ERD §8）；子对象级联处置待决策 D-09。"
+      summary: 删除阶段（物理删除，仅草稿路线）
+      description: |
+        仅所属路线 `status=draft` 允许（D-09 / ADR-006）：草稿阶段尚未参与执行，故为**物理删除**，
+        不写 `deleted_at`。`active` 路线只能改变阶段状态（skip / complete 等），`superseded` 路线只读。
+
+        级联：物理删除其下 milestone；其下任务**解挂保留**（`stage_id` / `milestone_id` 置 NULL）；
+        删除相关 goal_stage 关联行。存在子项时须显式 `?cascade=true`，否则返回 409 并给出影响面（D-21）。
+      parameters:
+        - $ref: "#/components/parameters/Cascade"
       responses:
         "200":
-          description: 删除成功
+          description: 删除成功（data 为 null）
           content:
             application/json:
               schema:
@@ -834,7 +980,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
-          $ref: "#/components/responses/Conflict"
+          $ref: "#/components/responses/ConflictWithImpact"
 
   /api/v1/projects/{project_id}/roadmaps/{roadmap_id}/stages/{stage_id}/start:
     x-learna-module: learning-planning
@@ -846,7 +992,9 @@ paths:
     post:
       tags: [stages]
       summary: 开始阶段（pending → active）
-      description: "写 started_at；允许提前进入（PRD §4.4）。"
+      description: |
+        写 `started_at`；允许提前进入（PRD §4.4）。
+        准入：所属路线须为 `status=active`；draft 路线是编辑区、superseded 路线只读，均返回 409（D-09）。
       responses:
         "200":
           description: 状态已变更
@@ -871,7 +1019,9 @@ paths:
     post:
       tags: [stages]
       summary: 完成阶段（active → completed）
-      description: "写 completed_at，completion_method=user（PRD §4.4 手动确认）。"
+      description: |
+        写 `completed_at`，`completion_method=user`（PRD §4.4 手动确认）。
+        准入：所属路线须为 `status=active`，否则 409（D-09）。
       responses:
         "200":
           description: 状态已变更
@@ -896,6 +1046,10 @@ paths:
     post:
       tags: [stages]
       summary: 跳过阶段（pending / active → skipped）
+      description: |
+        跳过是「计划调整」而非删除：阶段结构保留、状态置 skipped（PRD §4.4）。
+        准入：所属路线须为 `status=active`，否则 409（D-09）；这与「删除仅限 draft 路线」互斥，
+        因此 skip 与 delete 不构成二选一。
       responses:
         "200":
           description: 状态已变更
@@ -920,7 +1074,9 @@ paths:
     post:
       tags: [stages]
       summary: 返回阶段（completed / skipped → active）
-      description: "PRD §4.4 允许返回已跳过或已完成的阶段；是否清空 completed_at 待决策（D-18）。"
+      description: |
+        PRD §4.4 允许返回已跳过或已完成的阶段；`completed_at` 被清空，`started_at` 保持不变（D-18 / ADR-007）。
+        准入：所属路线须为 `status=active`，否则 409（D-09）。
       responses:
         "200":
           description: 状态已变更
@@ -943,7 +1099,7 @@ paths:
     get:
       tags: [milestones]
       summary: 里程碑列表
-      description: "可按阶段过滤；排序无 ERD 依据，暂用 created_at DESC（待决策 D-14）。"
+      description: "可按阶段过滤；排序固定 created_at ASC, id ASC（不提供 sort 参数，D-14）。"
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
@@ -969,7 +1125,7 @@ paths:
       tags: [milestones]
       summary: 创建里程碑
       description: "stage_id 必填（ERD 里程碑必属阶段）；status 初始 pending。"
-      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5 第 4 项）"
       requestBody:
         required: true
         content:
@@ -1013,7 +1169,10 @@ paths:
     patch:
       tags: [milestones]
       summary: 部分更新里程碑（含状态）
-      description: "状态迁移仅支持设计记录 §2.5 列出的边，其余返回 409（待决策 D-11）。"
+      description: |
+        状态迁移按统一规则校验（ADR-007）：允许跳过中间态、允许回退、终态之间不直转、
+        同态提交幂等 200；进入 completed 写 completed_at，离开时清空。
+        所属路线为 `superseded` 时只读（409，ADR-006）。
       requestBody:
         required: true
         content:
@@ -1037,11 +1196,16 @@ paths:
           $ref: "#/components/responses/ValidationError"
     delete:
       tags: [milestones]
-      summary: 删除里程碑（软删除）
-      description: "关联任务的处置待决策（D-10）。"
+      summary: 删除里程碑（物理删除，仅草稿路线）
+      description: |
+        仅所属路线 `status=draft` 允许（D-10 / ADR-006），物理删除；`active` 路线请改用状态动作（skip），
+        `superseded` 路线只读（409）。
+
+        关联任务**解挂保留**：只清 `milestone_id`，保留其 `stage_id`（任务有独立 `project_id`，
+        不依赖里程碑存活）。因此本端点没有 `cascade` 参数——任务不会随里程碑消失。
       responses:
         "200":
-          description: 删除成功
+          description: 删除成功（data 为 null）
           content:
             application/json:
               schema:
@@ -1050,6 +1214,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /api/v1/projects/{project_id}/tasks:
     x-learna-module: learning-planning
@@ -1059,7 +1225,7 @@ paths:
     get:
       tags: [tasks]
       summary: 任务列表
-      description: "可按 status / milestone_id 过滤；排序无 ERD 依据，暂用 created_at DESC（待决策 D-14）。"
+      description: "可按 status / milestone_id / stage_id 过滤；排序固定 priority DESC, created_at DESC, id DESC（ERD §7 索引，D-14）；不含软删行（D-17）。"
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
@@ -1091,7 +1257,7 @@ paths:
       tags: [tasks]
       summary: 创建任务
       description: "milestone_id 可空（支持无阶段的简单项目）；created_source=user；status 初始 todo。"
-      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5 第 4 项）"
       requestBody:
         required: true
         content:
@@ -1136,7 +1302,8 @@ paths:
       tags: [tasks]
       summary: 部分更新任务（含状态）
       description: |
-        状态迁移仅支持设计记录 §2.5 列出的边，其余返回 409（待决策 D-11）。
+        状态迁移按统一规则校验（ADR-007）：允许跳过中间态、允许回退、终态之间不直转、
+        同态提交幂等 200；进入 completed 写 completed_at，离开时清空。
         进入 completed 时服务端写 completed_at，离开 completed 时清空。
       requestBody:
         required: true
@@ -1162,7 +1329,9 @@ paths:
     delete:
       tags: [tasks]
       summary: 删除任务（软删除）
-      description: "依赖行随任务一并清理（关联行，非业务对象）。"
+      description: |
+        `deleted_at` 标记 + 列表过滤；同一事务物理删除其依赖行（关联行，非业务对象）。
+        任务不提供物理删除：它是唯一承载执行历史（`completed_at`）的对象（ADR-006）。
       responses:
         "200":
           description: 删除成功
@@ -1201,7 +1370,7 @@ paths:
       description: |
         校验两任务同属一个项目、禁止自依赖、环路检测（含新增边），单事务完成（ERD §5.1 TaskDependency）。
         违反返回 422；并发成环冲突返回 409。
-      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5 第 4 项）"
       requestBody:
         required: true
         content:
@@ -1338,6 +1507,16 @@ components:
       schema:
         type: string
         format: uuid
+    Cascade:
+      name: cascade
+      in: query
+      required: false
+      description: |
+        显式确认级联删除（D-21 / ADR-006）。缺省 false：存在子项时返回 409 并在 `data.impact`
+        给出计数；置 true 时执行级联。无论何种模式，任务只解挂不删除。
+      schema:
+        type: boolean
+        default: false
 
   responses:
     Unauthorized:
@@ -1370,6 +1549,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
+    ConflictWithImpact:
+      description: "状态/级联冲突，且携带删除影响面（code: CONFLICT；data 为 DeletionConflict）"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DeletionConflictEnvelope"
 
   schemas:
     EnvelopeMeta:
@@ -1422,6 +1607,40 @@ components:
           type: "null"
         request_id:
           type: string
+
+    DeletionConflictEnvelope:
+      type: object
+      description: |
+        409 携带删除影响面的专用信封（D-22）：全局规范 §5 明文例外，仅删除相关端点使用；
+        其余 409 仍走 ErrorEnvelope（data 为 null）。
+      required: [code, message, data, request_id]
+      properties:
+        code:
+          type: string
+          enum: [CONFLICT]
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/DeletionConflict"
+        request_id:
+          type: string
+
+    DeletionConflict:
+      type: object
+      description: 级联删除未确认或状态不允许时的影响面
+      required: [impact]
+      properties:
+        impact:
+          type: object
+          description: 受影响子对象计数，键按资源复数命名（stages / milestones / tasks）
+          additionalProperties:
+            type: integer
+          example:
+            milestones: 3
+            tasks: 7
+        hint:
+          type: string
+          description: 提示语，通常指向 `?cascade=true`
 
     UserResponse:
       type: object
@@ -1560,8 +1779,9 @@ components:
     ProjectStatus:
       type: string
       description: |
-        PRD §4.3 确认的五态。ERD §9 枚举建议另含 deleting（受控删除流程，D-02），未纳入（D-16）。
-      enum: [draft, active, paused, completed, archived]
+        六值合并（D-16 已决策）：PRD §4.3 五态 + ERD §9 的 deleting（受控删除中间态）。
+        v1 仅产生前五个值；deleting 为受控彻底删除流程预留（D-02）。
+      enum: [draft, active, paused, completed, archived, deleting]
 
     ProjectType:
       type: string
@@ -1694,7 +1914,9 @@ components:
 
     CreateProjectRequest:
       type: object
-      description: status 不可指定（初始 draft）；importance_level 默认值待决策（D-19）
+      description: |
+        status 不可指定（初始 draft）。省略字段取默认值（D-19）：
+        project_type=study、importance_level=3（PRD §5.1 I3「普通」）、deadline_type=none。
       required: [name]
       properties:
         name:
@@ -1702,16 +1924,21 @@ components:
         description:
           type: string
         project_type:
-          $ref: "#/components/schemas/ProjectType"
+          allOf:
+            - $ref: "#/components/schemas/ProjectType"
+          default: study
         importance_level:
           type: integer
           minimum: 1
           maximum: 5
+          default: 3
         importance_override_until:
           type: string
           format: date-time
         deadline_type:
-          $ref: "#/components/schemas/DeadlineType"
+          allOf:
+            - $ref: "#/components/schemas/DeadlineType"
+          default: none
         deadline_at:
           type: string
           format: date-time
@@ -1719,7 +1946,9 @@ components:
     UpdateProjectRequest:
       type: object
       description: |
-        部分更新。status 与 owner 不在可更新字段内；deadline_type=fixed 时修改 deadline_at 返回 422（D-04）。
+        部分更新。status 与 owner 不在可更新字段内（状态变更走动作端点）。
+        当前 deadline_type=fixed 的项目改期只能走 POST /projects/{id}/extend-deadline；
+        本端点提交此类变更返回 422（D-04 已决策）。
       properties:
         name:
           type: string
@@ -1739,6 +1968,29 @@ components:
         deadline_at:
           type: ["string", "null"]
           format: date-time
+
+    ExtendDeadlineRequest:
+      type: object
+      description: fixed 截止日期改期请求；reason 写入审计事件（D-04 已决策）
+      required: [new_deadline_at, reason]
+      properties:
+        new_deadline_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          minLength: 1
+
+    PurgeProjectRequest:
+      type: object
+      description: 强制删除项目的二次确认（D-02b）；模拟「输入仓库名」式防误删
+      required: [confirm_name]
+      properties:
+        confirm_name:
+          type: string
+          minLength: 1
+          maxLength: 160
+          description: 必须与项目 `name` 完全一致，否则返回 422
 
     # ==================== 学习规划模块：目标 ====================
 
@@ -1753,15 +2005,18 @@ components:
         project_id:
           type: string
           format: uuid
+        parent_goal_id:
+          type: ["string", "null"]
+          format: uuid
+          description: |
+            上级目标（D-06 已决策：parent_goal_id 自引用，最多两层）。
+            为空表示主目标；子目标必须挂在本项目的主目标下，不得跨项目或成环。
         title:
           type: string
         description:
           type: ["string", "null"]
         goal_type:
           $ref: "#/components/schemas/GoalType"
-        target_definition:
-          type: [object, "null"]
-          description: 结构化目标定义（JSONB）；内部结构未锁定，契约不约束（D-08）
         status:
           $ref: "#/components/schemas/GoalStatus"
         target_at:
@@ -1806,33 +2061,39 @@ components:
 
     CreateGoalRequest:
       type: object
-      description: status 不可指定（初始 active）
+      description: |
+        status 不可指定（初始 active）。parent_goal_id 省略即主目标；
+        指定时必须是同项目的主目标（层级上限两层，D-06 已决策）。
       required: [title]
       properties:
         title:
           type: string
         description:
           type: string
+        parent_goal_id:
+          type: ["string", "null"]
+          format: uuid
         goal_type:
           $ref: "#/components/schemas/GoalType"
-        target_definition:
-          type: object
         target_at:
           type: string
           format: date-time
 
     UpdateGoalRequest:
       type: object
-      description: 部分更新；status 仅允许 active → achieved / cancelled（D-07）
+      description: |
+        部分更新；status 仅允许 active → achieved / cancelled（D-07）。
+        parent_goal_id 置 null 即提升为主目标；变更后仍须满足同项目、两层上限、无环。
       properties:
         title:
           type: string
         description:
           type: ["string", "null"]
+        parent_goal_id:
+          type: ["string", "null"]
+          format: uuid
         goal_type:
           $ref: "#/components/schemas/GoalType"
-        target_definition:
-          type: ["object", "null"]
         target_at:
           type: ["string", "null"]
           format: date-time
@@ -1868,20 +2129,25 @@ components:
                   items:
                     $ref: "#/components/schemas/GoalStageItem"
 
-    GoalStageEnvelope:
-      allOf:
-        - $ref: "#/components/schemas/EnvelopeMeta"
-        - type: object
-          required: [data]
-          properties:
-            data:
-              $ref: "#/components/schemas/GoalStageItem"
-
-    UpsertGoalStageRequest:
+    ReplaceGoalStageLinksRequest:
       type: object
-      description: 幂等写入关联（复合主键决定）
-      required: [contribution]
+      description: 目标的完整关联集合；服务端在单事务内整体替换（D-13）
+      required: [links]
       properties:
+        links:
+          type: array
+          description: 该目标的全部阶段关联；传空数组即清空
+          items:
+            $ref: "#/components/schemas/GoalStageLink"
+
+    GoalStageLink:
+      type: object
+      description: 单条目标-阶段关联
+      required: [stage_id, contribution]
+      properties:
+        stage_id:
+          type: string
+          format: uuid
         contribution:
           $ref: "#/components/schemas/Contribution"
 
@@ -1985,9 +2251,6 @@ components:
           type: integer
         status:
           $ref: "#/components/schemas/StageStatus"
-        completion_rule:
-          type: [object, "null"]
-          description: 可选完成条件（JSONB）；内部结构未锁定（D-08）
         completion_method:
           $ref: "#/components/schemas/CompletionMethod"
         started_at:
@@ -2038,8 +2301,6 @@ components:
           type: string
         sequence_no:
           type: integer
-        completion_rule:
-          type: object
 
     UpdateStageRequest:
       type: object
@@ -2051,8 +2312,6 @@ components:
           type: ["string", "null"]
         sequence_no:
           type: integer
-        completion_rule:
-          type: ["object", "null"]
 
     # ==================== 学习规划模块：里程碑 ====================
 
@@ -2073,9 +2332,6 @@ components:
           type: ["string", "null"]
         status:
           $ref: "#/components/schemas/MilestoneStatus"
-        completion_rule:
-          type: [object, "null"]
-          description: 可选完成条件（JSONB）；内部结构未锁定（D-08）
         completed_at:
           type: ["string", "null"]
           format: date-time
@@ -2128,19 +2384,17 @@ components:
           type: string
         description:
           type: string
-        completion_rule:
-          type: object
 
     UpdateMilestoneRequest:
       type: object
-      description: 状态迁移边待决策（D-11）
+      description: |
+        状态迁移按统一规则校验（ADR-007）：允许跳过中间态、允许回退、终态之间不直转、
+        同态提交幂等 200；进入 completed 写 completed_at，离开时清空。
       properties:
         title:
           type: string
         description:
           type: ["string", "null"]
-        completion_rule:
-          type: ["object", "null"]
         status:
           $ref: "#/components/schemas/MilestoneStatus"
 
@@ -2160,6 +2414,12 @@ components:
         milestone_id:
           type: ["string", "null"]
           format: uuid
+        stage_id:
+          type: ["string", "null"]
+          format: uuid
+          description: |
+            直接所属阶段（D-05 已决策：模型补列）。与 milestone_id 可同时为空；
+            同时存在时阶段必须与里程碑所属阶段一致。
         title:
           type: string
         description:
@@ -2220,7 +2480,10 @@ components:
 
     CreateTaskRequest:
       type: object
-      description: milestone_id 可空；created_source 固定 user；status 初始 todo；priority 默认值待决策（D-19）
+      description: |
+        milestone_id 与 stage_id 均可省略：都省略时任务仅挂项目，只填 stage_id 即直挂阶段
+        （D-05 已决策）；created_source 固定 user；status 初始 todo；
+        priority 省略时默认 3（D-19）。
       required: [title]
       properties:
         title:
@@ -2230,10 +2493,14 @@ components:
         milestone_id:
           type: string
           format: uuid
+        stage_id:
+          type: string
+          format: uuid
         priority:
           type: integer
           minimum: 1
           maximum: 5
+          default: 3
         due_at:
           type: string
           format: date-time
@@ -2243,13 +2510,19 @@ components:
 
     UpdateTaskRequest:
       type: object
-      description: 状态迁移边待决策（D-11）；进入 completed 时服务端写 completed_at
+      description: |
+        状态迁移按统一规则校验（ADR-007）：允许跳过中间态、允许回退、终态之间不直转、
+        同态提交幂等 200。进入 completed 时服务端写 completed_at，离开时清空；
+        started_at 首次写入后不变。milestone_id / stage_id 置 null 即解除该层归属（D-05）。
       properties:
         title:
           type: string
         description:
           type: ["string", "null"]
         milestone_id:
+          type: ["string", "null"]
+          format: uuid
+        stage_id:
           type: ["string", "null"]
           format: uuid
         priority:
