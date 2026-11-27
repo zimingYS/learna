@@ -35,7 +35,7 @@ export const USER_KEY = "learna_user";
 
 // Axios 实例
 const http = axios.create({
-  baseURL: "/api",
+  baseURL: "/api/v1",
   timeout: 12_000,
 });
 

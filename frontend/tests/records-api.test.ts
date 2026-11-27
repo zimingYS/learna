@@ -54,14 +54,14 @@ describe("records API 请求契约", () => {
     });
   });
 
-  it("更新记录 PUT 到具体资源", async () => {
+  it("更新记录 PATCH 到具体资源", async () => {
     requestMock.mockResolvedValue({id: "r-1", title: "强化"});
 
     await updateRecord("r-1", {title: "强化"});
 
     expect(requestMock).toHaveBeenCalledWith({
       url: "/records/r-1",
-      method: "PUT",
+      method: "PATCH",
       data: {title: "强化"},
     });
   });

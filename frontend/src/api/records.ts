@@ -56,7 +56,7 @@ export function createRecord(input: CreateRecordInput): Promise<RecordItem> {
 export function updateRecord(id: string, input: UpdateRecordInput): Promise<RecordItem> {
   return request<RecordItem>({
     url: `/records/${id}`,
-    method: "PUT",
+    method: "PATCH",
     data: input,
   });
 }
