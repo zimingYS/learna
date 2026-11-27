@@ -73,22 +73,22 @@
 | # | 模块 | 后端目录 | 契约组（`接口清单.md`） | 主要表（ERD） | PRD | 优先级 | 实现状态 |
 |---|---|---|---|---|---|---|---|
 | M01 | 用户与权限 | `auth` `user` | §1 认证、§2 基础设施 | `users` | §15、§16.1 | P0 | ✅ auth 可用；user 空壳 |
-| M02 | 学习项目管理 | `project` | §4.1（13 项） | `learning_projects` ＋ ⚠ 优先级覆盖 / 投入保障 / 事件表 | §4.2、§4.3、§5 | P0 | 🟡 空壳，契约已冻结 |
-| M03 | 学习内容管理 | `knowledge` `library` | §4.2 | `learning_contents` `content_relations` `project_contents` ＋ ⚠ 标签表 | §6 | P1 | 🟡 空壳，契约未设计 |
+| M02 | 学习项目管理 | `project` | §4.1（13 项） | `learning_projects`（含 `theory_enabled` / `practice_enabled`）`project_priority_overrides` `project_commitment_rules` `project_events` | §4.2、§4.3、§5 | P0 | 🟡 空壳，契约已冻结 |
+| M03 | 学习内容管理 | `knowledge` `library` | §4.2 | `learning_contents` `content_relations` `project_contents` `content_tags` `learning_content_tags` | §6 | P1 | 🟡 空壳，契约未设计 |
 | M04 | 学习规划与调度 | `roadmap` `schedule` `task`(待建) | §4.1（35 项）、§4.6 | `project_goals` `roadmaps` `stages` `milestones` `learning_tasks` `task_dependencies` `goal_stages` `daily_learning_goals` `scheduled_activities` | §4.4、§4.5、§5.2、§11.1、§11.4 | P0（规划）/ P3（调度） | 🟡 规划契约已冻结、代码空壳；调度未设计 |
 | M05 | 学习活动与证据 | `learning_record` `learning_session`(待建) `evidence`(待建) | §3（过渡）、§4.3 | `learning_sessions` `session_projects` `session_contents` `task_sessions` `learning_evidence` | §11.2、§11.3 | P1 | 🔶 `/records` 过渡可用；正式模型未设计 |
 | M06 | 掌握度评价 | `mastery`(待建) | §4.4（掌握度） | `mastery_assessments` `overall_mastery_assessments` `overall_mastery` | §7 | P2 | ⬜ 未开始 |
-| M07 | 复习管理 | `review`(待建) | §4.4（复习） | `review_items` `review_records` `review_shares` ＋ ⚠ 策略 / 延期历史表 | §8 | P2 | ⬜ 未开始 |
-| M08 | 题库与练习 | `question`(待建) `practice`(待建) | §4.4（错题部分） | ⚠ 全部未定义（ERD §12 第 2 项要求单独评审） | §9 | P2 | ⬜ 未设计 |
-| M09 | 实践成果档案 | `artifact`(待建) | §4.5 | ⚠ `artifacts` `artifact_assets` `artifact_content_relations`（仅 TAD 概念） | §10 | P2 | ⬜ 未开始 |
-| M10 | 生活记录 | `life_log`(待建) | §4.7 | ⚠ 全部未定义（ERD 无） | §12 | P3 | ⬜ 未设计（可选模块） |
+| M07 | 复习管理 | `review`(待建) | §4.4（复习） | `review_items` `review_records` `review_shares` `review_policies` `review_reschedule_histories` | §8 | P2 | ⬜ 未开始 |
+| M08 | 题库与练习 | `question`(待建) `practice`(待建) | §4.4（错题部分） | `questions` `question_versions` `question_options` `question_assets` `question_knowledge_points` `question_sets` `question_set_items` `practice_sessions` `practice_answers` `wrong_question_states` `question_review_histories` | §9 | P2 | ⬜ 未设计 |
+| M09 | 实践成果档案 | `artifact`(待建) | §4.5 | `artifacts` `artifact_assets` `artifact_links` `artifact_content_relations` | §10 | P2 | ⬜ 未开始 |
+| M10 | 生活记录 | `life_log`(待建) | §4.7 | `sleep_records` `exercise_records` `meal_records` `body_measurements` `ai_data_permissions` | §12 | P3 | ⬜ 未设计（可选模块） |
 | M11 | 数据分析 | `report` | §4.8（分析） | 无自有表（只读聚合） | §13 | P2 | 🟡 空壳，无数据源 |
 | M12 | AI 智能服务 | `ai_task` `plan_change` + `ai-service/` | §4.8（AI） | `change_proposals` ＋ ⚠ `ai_tasks`（v1 不需要） | §14 | P3 | 🟡 骨架 + 5 个 501 占位 |
 
 状态标记：✅ 已实现并可用 ｜ 🔶 过渡实现（非正式契约）｜ 🟡 空壳或骨架 ｜ ⬜ 未开始
-表标记：⚠ = **ERD 尚未定义**，只有 TAD 概念或 PRD 要求；写 Migration 前必须先补 ERD（详见各模块文档 §5）
+表标记：⚠ = **ERD 尚未定义**。V1.2 之后仅剩 `ai_tasks` 一处（v1 不需要），其余全部已进 ERD。
 
-> **⚠ 合计 6 处模型缺口**：M02（优先级覆盖/投入保障/事件）、M03（标签）、M07（策略/延期历史）、M08（全部）、M09（全部）、M10（全部）。其中 **M08/M09/M10 三块在 ERD 里连一张表都没有**，属「需要独立建模」级别，不是补几列能解决的。
+> **模型缺口已在 ERD V1.2 补齐**：M02（2 列 + 3 表）、M03（2 表）、M07（2 表）、M08（11 表）、M09（4 表）、M10（5 表），合计 **27 表 2 列**，见 ERD V1.2 §5.2 / §5.4 / §5.6–5.9 与 ADR-008。仍未定的只有 6 项，都在 ERD §12 第 11–16 项（题型 `answer_payload` schema、有效学习日算法、审计表、统一附件登记、成果归属、内容正文形态），**均不阻塞 Migration**。
 
 **模块拆分的三处判断，需要知道理由**：
 
