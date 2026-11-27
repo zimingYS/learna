@@ -1,0 +1,444 @@
+openapi: 3.1.0
+info:
+  title: Learna API
+  version: "1.0.0"
+  description: |
+    Learna 接口契约（已确认接口）。
+
+    - 全局规范见 docs/接口契约/README.md；业务目录见 docs/接口契约/接口清单.md。
+    - `/api/v1/records` 为**过渡实现**（x-learna-status: interim），不是正式 LearningSession 契约。
+    - 未确认的业务接口（projects / learning-sessions / mastery / reviews 等）不收录于此，待模块设计评审后逐个冻结。
+  license:
+    name: PolyForm Noncommercial 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: 本地开发（经 vite/nginx 代理时为 /api/v1 相对路径）
+security:
+  - bearerAuth: []
+tags:
+  - name: infrastructure
+    description: 基础设施端点（不版本化）
+  - name: auth
+    description: 认证
+  - name: records
+    description: 学习记录（过渡实现，非正式 LearningSession 契约）
+
+paths:
+  /healthz:
+    get:
+      tags: [infrastructure]
+      summary: 存活探针
+      security: []
+      responses:
+        "200":
+          description: 存活
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+
+  /readyz:
+    get:
+      tags: [infrastructure]
+      summary: 就绪探针（检查数据库连接）
+      security: []
+      responses:
+        "200":
+          description: 就绪
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/auth/register:
+    post:
+      tags: [auth]
+      summary: 用户注册
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: 注册成功，返回 JWT 与用户信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthEnvelope"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      summary: 用户登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: 登录成功，返回 JWT 与用户信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/records:
+    get:
+      tags: [records]
+      summary: 学习记录分页列表（过渡实现）
+      x-learna-status: interim
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: 分页列表（items 按 created_at DESC）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [records]
+      summary: 创建学习记录（过渡实现）
+      x-learna-status: interim
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRecordRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/records/{id}:
+    parameters:
+      - $ref: "#/components/parameters/RecordId"
+    get:
+      tags: [records]
+      summary: 学习记录详情（过渡实现）
+      x-learna-status: interim
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [records]
+      summary: 部分更新学习记录（过渡实现）
+      description: |
+        PATCH 三态语义（ADR-002）：字段缺失＝不变；显式 null＝置空；值＝更新。
+        过渡实现当前为二态（缺失与显式 null 均视为不修改），三态对齐属待决策。
+      x-learna-status: interim
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRecordRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [records]
+      summary: 删除学习记录（过渡实现，物理删除）
+      description: 删除语义与正式模型（保留历史、更正需审计）不一致，属待决策。
+      x-learna-status: interim
+      responses:
+        "200":
+          description: 删除成功（data 为 null）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Authorization: Bearer <JWT>（HS256，有效期 7 天）"
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      description: 页码，≥1，默认 1
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: page_size
+      in: query
+      required: false
+      description: 每页条数，1–100，默认 10
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    RecordId:
+      name: id
+      in: path
+      required: true
+      description: 记录 UUID
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: "未认证（code: UNAUTHORIZED / TOKEN_ERROR）"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    NotFound:
+      description: "资源不存在或不属于当前用户（code: NOT_FOUND）"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ValidationError:
+      description: "入参校验失败（code: VALIDATION_ERROR）"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    InternalError:
+      description: "内部错误（code: INTERNAL_ERROR）"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+  schemas:
+    EnvelopeMeta:
+      type: object
+      description: 统一响应信封公共字段（成功与失败都必填 request_id）
+      required: [code, message, request_id]
+      properties:
+        code:
+          type: string
+          description: '"200" 表示成功；其余为稳定业务错误码'
+        message:
+          type: string
+        request_id:
+          type: string
+          description: 请求追踪 ID（UUID v4，由中间件生成）
+
+    EmptyEnvelope:
+      type: object
+      required: [code, message, data, request_id]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: "null"
+        request_id:
+          type: string
+
+    ErrorEnvelope:
+      type: object
+      required: [code, message, data, request_id]
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+            - UNAUTHORIZED
+            - TOKEN_ERROR
+            - FORBIDDEN
+            - NOT_FOUND
+            - CONFLICT
+            - RATE_LIMITED
+            - UPSTREAM_ERROR
+            - INTERNAL_ERROR
+            - HASH_ERROR
+        message:
+          type: string
+        data:
+          type: "null"
+        request_id:
+          type: string
+
+    UserResponse:
+      type: object
+      required: [id, email, display_name]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        display_name:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+          description: JWT
+        user:
+          $ref: "#/components/schemas/UserResponse"
+
+    AuthEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/AuthResponse"
+
+    RegisterRequest:
+      type: object
+      required: [email, password, display_name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+        display_name:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    RecordItem:
+      type: object
+      description: 过渡实体，非正式 LearningSession（差异见设计记录/现有接口审计.md）
+      required: [id, title, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: ["string", "null"]
+        duration_minutes:
+          type: ["integer", "null"]
+        subject:
+          type: ["string", "null"]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RecordListData:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecordItem"
+        total:
+          type: integer
+          format: int64
+
+    RecordEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/RecordItem"
+
+    RecordListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/RecordListData"
+
+    CreateRecordRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        duration_minutes:
+          type: integer
+        subject:
+          type: string
+
+    UpdateRecordRequest:
+      type: object
+      description: 部分更新；全部字段可选。正式契约要求区分缺失/null/值（过渡实现当前为二态）
+      properties:
+        title:
+          type: string
+        content:
+          type: ["string", "null"]
+        duration_minutes:
+          type: integer
+        subject:
+          type: ["string", "null"]
