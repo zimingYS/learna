@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Learna API
-  version: "1.4.0"
+  version: "1.4.1"
   description: |
     Learna 接口契约（已确认接口）。
 
@@ -11,8 +11,11 @@ info:
       （x-learna-status: designed），依据见 docs/接口契约/设计记录/学习规划模块契约设计.md；
       该模块 23 项决策已全部落定（ADR-005 / ADR-006 / ADR-007），无待决策项。
     - 删除语义按四层划分（ADR-006）：draft 容器级物理删除、已生效结构不提供删除、任务软删除、
-      成果对象禁止删除。带子项的删除默认 409 并返回影响面，需显式 `?cascade=true`。
+      成果对象禁止删除。带子项的删除默认 409 并返回影响面，需显式 `?cascade=true`；删主目标时
+      子目标随之一并删除，**不**升格为主目标。
     - 状态迁移统一规则（ADR-007）：允许跳过中间态、允许回退、终态之间不直转、同态提交幂等。
+      该规则**仅适用于以 PATCH status 驱动的里程碑与任务**；阶段走 `start / complete / skip /
+      reactivate` 四动作端点，`pending` 不能直接 `complete`（须先 `start`），回退目标固定为 `active`。
     - **契约最小承诺**（ADR-007）：`completion_rule` / `target_definition` 等无生产者的 JSONB 字段
       不进契约；软删除标记 `deleted_at` 不对外暴露；列表默认序固定，不提供 `sort` 参数。
     - 其余未确认业务接口（learning-sessions / mastery / reviews / AI 提案等）不收录于此。
@@ -654,6 +657,12 @@ paths:
 
         `status=achieved` 返回 409：达成是成果事实，删除后不可追溯；如需清理展示，保留目标并改状态。
         `active` / `cancelled` 允许删除（「建错了」或「不做了」）。
+
+        子目标：删除**主目标**时其下子目标一并删除，须显式 `?cascade=true`，否则返回 409 并在
+        `data.impact.goals` 给出计数（D-21）。**不采用**把子目标 `parent_goal_id` 置 NULL 的做法——
+        那会把子目标升格为主目标，破坏「每项目最多一个主目标」（D-06）。删除子目标本身无此要求。
+      parameters:
+        - $ref: "#/components/parameters/Cascade"
       responses:
         "200":
           description: 删除成功（data 为 null）
@@ -666,7 +675,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
-          $ref: "#/components/responses/Conflict"
+          $ref: "#/components/responses/ConflictWithImpact"
 
   /api/v1/projects/{project_id}/goals/{goal_id}/stages:
     x-learna-module: learning-planning
@@ -1513,7 +1522,8 @@ components:
       required: false
       description: |
         显式确认级联删除（D-21 / ADR-006）。缺省 false：存在子项时返回 409 并在 `data.impact`
-        给出计数；置 true 时执行级联。无论何种模式，任务只解挂不删除。
+        给出计数；置 true 时执行级联。级联范围因资源而异：路线 / 阶段 / 里程碑删除时**任务只解挂
+        不删除**；目标删除时**子目标随主目标一并删除**（不升格为主目标）。
       schema:
         type: boolean
         default: false

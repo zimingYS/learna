@@ -19,8 +19,12 @@
 | 补 3 张域关系图、关系基数与跨表规则 | §4.5–4.7、§6、§6.1 | 本次新增实体 |
 | 索引、枚举、服务边界、实施优先级、待补项同步 | §7、§9–§12 | 本次新增实体 |
 | §1.2 补第 8 条原则「派生值不入库」 | §1.2 | ADR-007 契约最小承诺的模型侧对应 |
+| **新增 §8.2 外键删除行为**（规划域 13 根外键的 `ON DELETE`） | §8.2 | ADR-006；ADR-007 §6；M04 §5 复核 |
+| **§5.1 补 `parent_goal_id` 级联语义、`learning_tasks` 三根外键行为** | §5.1 | ADR-006 §3；M04 §5 复核 |
 
 本次修订**只补模型缺口**，不修改任何既有实体字段、关系与已确认规则。新增表全部沿用 V1.1 的删除语义分层（ADR-006）：只有承载执行历史的表才考虑软删除，其余以状态 / 归档表达退场，不新增 `deleted_at`。决策理由与放弃的方案见 **ADR-008**。
+
+2026-11-27 二次核对另补入 §8.2 与 §5.1 两处**外键删除行为说明**（不是字段变更）：原文档只写「FK → X」，未定 `ON DELETE`，导致「软删任务 + 删阶段」在 Migration 层会外键违约，以及「删主目标」会把子目标升格为第二个主目标。修正依据见 ADR-006 §3 / §4、ADR-007 §6。
 
 **V1.1 变更记录（2026-11-27）**
 
@@ -456,6 +460,9 @@ DATE。数据库具体类型以目标数据库为准。
 
 `parent_goal_id` 为 V1.1 补列：`NULL` 表示主目标，非空表示子目标。服务层须保证
 同项目内、不得自引用、不得成环、层级上限两层（PRD §4.5「一个主要目标及多个子目标」）。
+该列外键必须写 `ON DELETE CASCADE` 而**不是** `SET NULL`：`SET NULL` 会把子目标升格为主目标，
+造出第二个主目标，直接破坏「每项目最多一个主目标」；级联删除的子目标数须计入
+`409 DeletionConflict` 的 `impact.goals`（ADR-006 级联确认形态 C）。
 
 #### Roadmap
 
@@ -564,6 +571,12 @@ roadmap（可用部分唯一索引实现）。
 
 `deleted_at` 为 V1.1 补列：**全库唯一需要软删除的表**。任务承载执行历史
 （`completed_at`），删除后行保留但不再参与任何查询与计数。其余对象按 §8 分层处理。
+
+该表的三根外键行为不同，**不可统一**：`project_id` 用 `ON DELETE CASCADE`（唯一绕过
+软删的路径，项目行物理删除时任务连同软删行一并消失）；`stage_id` / `milestone_id` 用
+`ON DELETE SET NULL`（任务不随上层结构消失，只能解挂）。**软删行也会被 `SET NULL`**——
+外键不检查 `deleted_at`，若改成 `RESTRICT`，删阶段会因一条用户看不见的软删任务而外键
+违约（500 而非语义正确的解挂），详见 §8.2。
 
 #### TaskDependency
 
@@ -1802,6 +1815,37 @@ ReviewItem 建立部分唯一索引，避免同一上下文重复启用同类型
 第 7、8、10 步在 v1 无对象可处理（学习记录属 P1 未设计，派生调度与附件清理尚未设计）；
 第 9 步的审计事件暂无存储表，以结构化 WARN 日志落地。
 删除入口分两条：`status=draft` 走普通 `DELETE`，其余状态走需重输项目名的受控 `purge`。详见 ADR-006。
+
+### 8.2 外键删除行为（V1.2 补充，Migration 必须逐条照写）
+
+外键的 `ON DELETE` 不是实现细节，它决定上面 L1–L4 分层是否真能成立。**默认的 `NO ACTION` 会破坏软删除**：一条用户看不见的软删任务会让「删阶段」外键违约，返回 500 而不是语义正确的解挂。因此规划域 13 根外键全部显式声明：
+
+| 子表.列 | 父表 | `ON DELETE` | 归属性质 | 理由 |
+|---|---|---|---|---|
+| `roadmaps.project_id` | `learning_projects` | `CASCADE` | 归属根 | 路线不能脱离项目 |
+| `roadmaps.created_by` | `users` | `SET NULL` | 操作者记录 | ERD 允许系统操作语义为空 |
+| `project_goals.project_id` | `learning_projects` | `CASCADE` | 归属根 | 目标不能脱离项目 |
+| `project_goals.parent_goal_id` | `project_goals` | `CASCADE` | 结构从属 | `SET NULL` 会造出第二个主目标（§5.1） |
+| `stages.roadmap_id` | `roadmaps` | `CASCADE` | 结构从属 | 阶段是路线内结构，draft 路线删除即物理删阶段 |
+| `milestones.stage_id` | `stages` | `CASCADE` | 结构从属 | `stage_id` NOT NULL，无「无阶段里程碑」 |
+| `learning_tasks.project_id` | `learning_projects` | `CASCADE` | 归属根 | **唯一绕过软删的合法路径**（任务 `project_id` NOT NULL） |
+| `learning_tasks.stage_id` | `stages` | `SET NULL` | 可选归属 | 任务不随上层结构消失（L3） |
+| `learning_tasks.milestone_id` | `milestones` | `SET NULL` | 可选归属 | 同上 |
+| `task_dependencies.task_id` | `learning_tasks` | `CASCADE` | 纯关联 | 无独立历史 |
+| `task_dependencies.depends_on_task_id` | `learning_tasks` | `CASCADE` | 纯关联 | 无独立历史 |
+| `goal_stages.goal_id` | `project_goals` | `CASCADE` | 纯关联 | 无独立历史 |
+| `goal_stages.stage_id` | `stages` | `CASCADE` | 纯关联 | 无独立历史 |
+
+**三条判据**（其余新增表照此推导）：
+
+1. **归属根 → `CASCADE`**：子行离开父行没有意义（`NOT NULL` 外键）。
+2. **可选归属 → `SET NULL`**：子行是独立实体，父行消失后降级为「不挂结构」。
+3. **纯关联行 → `CASCADE`**：行本身不承载任何事实，只表达「两个实体曾经/正在相连」。
+
+**两处只能靠服务层、DB 兜不住**（软删除的固有代价）：
+
+- **软删任务时物理删其依赖行**：软删是 `UPDATE`，不触发 `ON DELETE CASCADE`。`task_dependencies` 的 `CASCADE` 只在项目 `purge` 真正 `DELETE` 任务行时生效。
+- **影响面计数**：DB 级联不返回「删了几个子行」，`DeletionConflict.impact` 必须在删除前单独 `SELECT COUNT(*)`。
 
 ------------------------------------------------------------------------
 
