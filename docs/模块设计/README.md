@@ -73,9 +73,9 @@
 | # | 模块 | 后端目录 | 契约组（`接口清单.md`） | 主要表（ERD） | PRD | 优先级 | 实现状态 |
 |---|---|---|---|---|---|---|---|
 | M01 | 用户与权限 | `auth` `user` | §1 认证、§2 基础设施 | `users` | §15、§16.1 | P0 | ✅ auth 可用；user 空壳 |
-| M02 | 学习项目管理 | `project` | §4.1（13 项） | `learning_projects`（含 `theory_enabled` / `practice_enabled`）`project_priority_overrides` `project_commitment_rules` `project_events` | §4.2、§4.3、§5 | P0 | 🟡 空壳，契约已冻结 |
+| M02 | 学习项目管理 | `project` | §4.1（13 项） | `learning_projects`（含 `theory_enabled` / `practice_enabled`）`project_priority_overrides` `project_commitment_rules` `project_events` | §4.2、§4.3、§5 | P0 | ✅ 后端 + 前端已完成；审计表与 `project_events` 未建 |
 | M03 | 学习内容管理 | `knowledge` `library` | §4.2 | `learning_contents` `content_relations` `project_contents` `content_tags` `learning_content_tags` | §6 | P1 | 🟡 空壳，契约未设计 |
-| M04 | 学习规划与调度 | `roadmap` `schedule` `task`(待建) | §4.1（35 项）、§4.6 | `project_goals` `roadmaps` `stages` `milestones` `learning_tasks` `task_dependencies` `goal_stages` `daily_learning_goals` `scheduled_activities` | §4.4、§4.5、§5.2、§11.1、§11.4 | P0（规划）/ P3（调度） | 🟡 规划契约已冻结、代码空壳；调度未设计 |
+| M04 | 学习规划与调度 | `roadmap` `task` `schedule`(P3) | §4.1（35 项）、§4.6 | `project_goals` `roadmaps` `stages` `milestones` `learning_tasks` `task_dependencies` `goal_stages` `daily_learning_goals` `scheduled_activities` | §4.4、§4.5、§5.2、§11.1、§11.4 | P0（规划）/ P3（调度） | ✅ 规划部分后端 + 前端已完成；调度未设计 |
 | M05 | 学习活动与证据 | `learning_record` `learning_session`(待建) `evidence`(待建) | §3（过渡）、§4.3 | `learning_sessions` `session_projects` `session_contents` `task_sessions` `learning_evidence` | §11.2、§11.3 | P1 | 🔶 `/records` 过渡可用；正式模型未设计 |
 | M06 | 掌握度评价 | `mastery`(待建) | §4.4（掌握度） | `mastery_assessments` `overall_mastery_assessments` `overall_mastery` | §7 | P2 | ⬜ 未开始 |
 | M07 | 复习管理 | `review`(待建) | §4.4（复习） | `review_items` `review_records` `review_shares` `review_policies` `review_reschedule_histories` | §8 | P2 | ⬜ 未开始 |
