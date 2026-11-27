@@ -1,13 +1,15 @@
 openapi: 3.1.0
 info:
   title: Learna API
-  version: "1.0.0"
+  version: "1.1.0"
   description: |
     Learna 接口契约（已确认接口）。
 
     - 全局规范见 docs/接口契约/README.md；业务目录见 docs/接口契约/接口清单.md。
     - `/api/v1/records` 为**过渡实现**（x-learna-status: interim），不是正式 LearningSession 契约。
-    - 未确认的业务接口（projects / learning-sessions / mastery / reviews 等）不收录于此，待模块设计评审后逐个冻结。
+    - 学习规划模块（projects / goals / roadmaps / stages / milestones / tasks）为**已设计、未实现**
+      （x-learna-status: designed），依据见 docs/接口契约/设计记录/学习规划模块契约设计.md。
+    - 其余未确认业务接口（learning-sessions / mastery / reviews / AI 提案等）不收录于此。
   license:
     name: PolyForm Noncommercial 1.0.0
 servers:
@@ -22,6 +24,18 @@ tags:
     description: 认证
   - name: records
     description: 学习记录（过渡实现，非正式 LearningSession 契约）
+  - name: projects
+    description: 学习项目（已设计，未实现）
+  - name: goals
+    description: 项目目标与目标-阶段关联（已设计，未实现）
+  - name: roadmaps
+    description: 项目路线，版本化（已设计，未实现）
+  - name: stages
+    description: 路线阶段（已设计，未实现）
+  - name: milestones
+    description: 里程碑（已设计，未实现）
+  - name: tasks
+    description: 学习任务与前置依赖（已设计，未实现）
 
 paths:
   /healthz:
@@ -196,6 +210,1042 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # ==================== 学习规划模块（已设计，未实现） ====================
+  # 统一标记 x-learna-status: designed；待决策端点不收录（见设计记录 §10）。
+
+  /api/v1/projects:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    get:
+      tags: [projects]
+      summary: 项目列表
+      description: "默认排除已归档（PRD §4.3）；排序固定 updated_at DESC（ERD §7 索引建议）；传 status=archived 可查归档项目。"
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: status
+          in: query
+          required: false
+          description: 按项目状态过滤
+          schema:
+            $ref: "#/components/schemas/ProjectStatus"
+      responses:
+        "200":
+          description: 分页列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    post:
+      tags: [projects]
+      summary: 创建项目
+      description: "初始状态 draft（PRD §4.3）。"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [projects]
+      summary: 项目详情
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [projects]
+      summary: 部分更新项目
+      description: |
+        字段语义按 ADR-002 三态（缺失＝不变、null＝置空、值＝更新）；跨模块落地范围待统一（接口清单 §5.2）。
+        状态不可经 PATCH 修改，必须走动作端点。deadline_type=fixed 时修改 deadline_at 返回 422（特殊确认流程待决策 D-04）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}/activate:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    post:
+      tags: [projects]
+      summary: 开始项目（草稿 → 进行中）
+      responses:
+        "200":
+          description: 状态已变更
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/pause:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    post:
+      tags: [projects]
+      summary: 暂停项目（进行中 → 暂停）
+      responses:
+        "200":
+          description: 状态已变更
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/resume:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    post:
+      tags: [projects]
+      summary: 恢复项目（暂停 → 进行中）
+      responses:
+        "200":
+          description: 状态已变更
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/complete:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    post:
+      tags: [projects]
+      summary: 完成项目（进行中 → 已完成）
+      responses:
+        "200":
+          description: 状态已变更
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/reopen:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    post:
+      tags: [projects]
+      summary: 重新开启项目（已完成 / 已归档 → 进行中）
+      description: "写 reopened_at；已归档时清空 archived_at；保留全部历史数据（PRD §4.3）。"
+      responses:
+        "200":
+          description: 状态已变更
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/archive:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    post:
+      tags: [projects]
+      summary: 归档项目
+      description: "写 archived_at；不级联删除子数据（ERD D-05）。"
+      responses:
+        "200":
+          description: 状态已变更
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/goals:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [goals]
+      summary: 项目目标列表
+      description: "排序无 ERD 依据，暂用 created_at DESC（待决策 D-14）。"
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: 分页列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [goals]
+      summary: 创建项目目标
+      description: "初始状态 active（ERD §5.1）。"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGoalRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}/goals/{goal_id}:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/GoalId"
+    get:
+      tags: [goals]
+      summary: 目标详情
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [goals]
+      summary: 部分更新目标（含 active → achieved / cancelled）
+      description: "achieved / cancelled 不可回退到 active（恢复语义待决策 D-07）；非法迁移返回 409。"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGoalRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}/goals/{goal_id}/stages:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/GoalId"
+    get:
+      tags: [goals]
+      summary: 目标关联的阶段列表
+      description: "返回 GoalStage 关联行（goal_id / stage_id / contribution），不展开阶段详情。"
+      responses:
+        "200":
+          description: 关联列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalStageListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/projects/{project_id}/goals/{goal_id}/stages/{stage_id}:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/GoalId"
+      - $ref: "#/components/parameters/StageId"
+    put:
+      tags: [goals]
+      summary: 建立或更新目标-阶段关联（幂等）
+      description: "复合主键 (goal_id, stage_id) 决定幂等语义；目标与阶段须同属该项目。"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertGoalStageRequest"
+      responses:
+        "200":
+          description: 关联已写入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoalStageEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [goals]
+      summary: 解除目标-阶段关联
+      description: "仅删除关联行，不删除目标或阶段。"
+      responses:
+        "200":
+          description: 解除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/projects/{project_id}/roadmaps:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [roadmaps]
+      summary: 路线版本历史
+      description: "含 superseded 版本（ERD §8 保留路线历史）；排序 version DESC（ERD §7）。"
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: 分页列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [roadmaps]
+      summary: 创建路线草稿
+      description: "version 由服务端按项目自增；status 初始 draft。"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoadmapRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}/roadmaps/{roadmap_id}:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/RoadmapId"
+    get:
+      tags: [roadmaps]
+      summary: 路线详情
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [roadmaps]
+      summary: 部分更新路线
+      description: "仅 draft 可编辑；active / superseded 返回 409。"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoadmapRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}/roadmaps/{roadmap_id}/confirm:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/RoadmapId"
+    post:
+      tags: [roadmaps]
+      summary: 确认路线（draft → active）
+      description: |
+        单事务完成：同项目原 active 路线置 superseded → 目标路线置 active 并写 confirmed_at。
+        保证「一个项目最多一个 active roadmap」（ERD §5.1）。非 draft 返回 409。
+      responses:
+        "200":
+          description: 确认成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/roadmaps/{roadmap_id}/stages:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/RoadmapId"
+    get:
+      tags: [stages]
+      summary: 阶段列表
+      description: "排序 sequence_no ASC（ERD §7 唯一索引）。"
+      responses:
+        "200":
+          description: 列表（非分页，按路线一次性返回）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StageListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [stages]
+      summary: 创建阶段
+      description: "sequence_no 省略时追加到该路线末尾；status 初始 pending。"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStageRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StageEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}/roadmaps/{roadmap_id}/stages/{stage_id}:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/RoadmapId"
+      - $ref: "#/components/parameters/StageId"
+    get:
+      tags: [stages]
+      summary: 阶段详情
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StageEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [stages]
+      summary: 部分更新阶段
+      description: "draft / active 路线可编辑；superseded 路线只读（409）。状态必须走动作端点。"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStageRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StageEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [stages]
+      summary: 删除阶段（软删除）
+      description: "仅 draft 路线允许删除（ERD §8）；子对象级联处置待决策 D-09。"
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/roadmaps/{roadmap_id}/stages/{stage_id}/start:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/RoadmapId"
+      - $ref: "#/components/parameters/StageId"
+    post:
+      tags: [stages]
+      summary: 开始阶段（pending → active）
+      description: "写 started_at；允许提前进入（PRD §4.4）。"
+      responses:
+        "200":
+          description: 状态已变更
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StageEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/roadmaps/{roadmap_id}/stages/{stage_id}/complete:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/RoadmapId"
+      - $ref: "#/components/parameters/StageId"
+    post:
+      tags: [stages]
+      summary: 完成阶段（active → completed）
+      description: "写 completed_at，completion_method=user（PRD §4.4 手动确认）。"
+      responses:
+        "200":
+          description: 状态已变更
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StageEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/roadmaps/{roadmap_id}/stages/{stage_id}/skip:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/RoadmapId"
+      - $ref: "#/components/parameters/StageId"
+    post:
+      tags: [stages]
+      summary: 跳过阶段（pending / active → skipped）
+      responses:
+        "200":
+          description: 状态已变更
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StageEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/roadmaps/{roadmap_id}/stages/{stage_id}/reactivate:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/RoadmapId"
+      - $ref: "#/components/parameters/StageId"
+    post:
+      tags: [stages]
+      summary: 返回阶段（completed / skipped → active）
+      description: "PRD §4.4 允许返回已跳过或已完成的阶段；是否清空 completed_at 待决策（D-18）。"
+      responses:
+        "200":
+          description: 状态已变更
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StageEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/projects/{project_id}/milestones:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [milestones]
+      summary: 里程碑列表
+      description: "可按阶段过滤；排序无 ERD 依据，暂用 created_at DESC（待决策 D-14）。"
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: stage_id
+          in: query
+          required: false
+          description: 按所属阶段过滤
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 分页列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MilestoneListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [milestones]
+      summary: 创建里程碑
+      description: "stage_id 必填（ERD 里程碑必属阶段）；status 初始 pending。"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMilestoneRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MilestoneEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}/milestones/{milestone_id}:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/MilestoneId"
+    get:
+      tags: [milestones]
+      summary: 里程碑详情
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MilestoneEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [milestones]
+      summary: 部分更新里程碑（含状态）
+      description: "状态迁移仅支持设计记录 §2.5 列出的边，其余返回 409（待决策 D-11）。"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMilestoneRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MilestoneEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [milestones]
+      summary: 删除里程碑（软删除）
+      description: "关联任务的处置待决策（D-10）。"
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/projects/{project_id}/tasks:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [tasks]
+      summary: 任务列表
+      description: "可按 status / milestone_id 过滤；排序无 ERD 依据，暂用 created_at DESC（待决策 D-14）。"
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: status
+          in: query
+          required: false
+          description: 按任务状态过滤
+          schema:
+            $ref: "#/components/schemas/TaskStatus"
+        - name: milestone_id
+          in: query
+          required: false
+          description: 按所属里程碑过滤
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 分页列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [tasks]
+      summary: 创建任务
+      description: "milestone_id 可空（支持无阶段的简单项目）；created_source=user；status 初始 todo。"
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}/tasks/{task_id}:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/TaskId"
+    get:
+      tags: [tasks]
+      summary: 任务详情
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [tasks]
+      summary: 部分更新任务（含状态）
+      description: |
+        状态迁移仅支持设计记录 §2.5 列出的边，其余返回 409（待决策 D-11）。
+        进入 completed 时服务端写 completed_at，离开 completed 时清空。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [tasks]
+      summary: 删除任务（软删除）
+      description: "依赖行随任务一并清理（关联行，非业务对象）。"
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/projects/{project_id}/tasks/{task_id}/dependencies:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/TaskId"
+    get:
+      tags: [tasks]
+      summary: 任务的前置依赖列表
+      responses:
+        "200":
+          description: 依赖列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDependencyListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [tasks]
+      summary: 新增前置依赖
+      description: |
+        校验两任务同属一个项目、禁止自依赖、环路检测（含新增边），单事务完成（ERD §5.1 TaskDependency）。
+        违反返回 422；并发成环冲突返回 409。
+      x-learna-open-question: "创建成功状态码 200 vs 201 待决策（接口清单 §5.4）"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskDependencyRequest"
+      responses:
+        "200":
+          description: 依赖已建立
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDependencyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/projects/{project_id}/tasks/{task_id}/dependencies/{depends_on_task_id}:
+    x-learna-module: learning-planning
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/TaskId"
+      - $ref: "#/components/parameters/DependsOnTaskId"
+    delete:
+      tags: [tasks]
+      summary: 解除前置依赖
+      responses:
+        "200":
+          description: 解除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -232,6 +1282,62 @@ components:
       schema:
         type: string
         format: uuid
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      description: 项目 UUID
+      schema:
+        type: string
+        format: uuid
+    GoalId:
+      name: goal_id
+      in: path
+      required: true
+      description: 项目目标 UUID
+      schema:
+        type: string
+        format: uuid
+    RoadmapId:
+      name: roadmap_id
+      in: path
+      required: true
+      description: 路线 UUID
+      schema:
+        type: string
+        format: uuid
+    StageId:
+      name: stage_id
+      in: path
+      required: true
+      description: 阶段 UUID
+      schema:
+        type: string
+        format: uuid
+    MilestoneId:
+      name: milestone_id
+      in: path
+      required: true
+      description: 里程碑 UUID
+      schema:
+        type: string
+        format: uuid
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      description: 任务 UUID
+      schema:
+        type: string
+        format: uuid
+    DependsOnTaskId:
+      name: depends_on_task_id
+      in: path
+      required: true
+      description: 前置任务 UUID
+      schema:
+        type: string
+        format: uuid
 
   responses:
     Unauthorized:
@@ -254,6 +1360,12 @@ components:
             $ref: "#/components/schemas/ErrorEnvelope"
     InternalError:
       description: "内部错误（code: INTERNAL_ERROR）"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Conflict:
+      description: "资源当前状态不允许该操作或状态机非法迁移（code: CONFLICT）"
       content:
         application/json:
           schema:
@@ -442,3 +1554,764 @@ components:
           type: integer
         subject:
           type: ["string", "null"]
+
+    # ==================== 学习规划模块：枚举 ====================
+
+    ProjectStatus:
+      type: string
+      description: |
+        PRD §4.3 确认的五态。ERD §9 枚举建议另含 deleting（受控删除流程，D-02），未纳入（D-16）。
+      enum: [draft, active, paused, completed, archived]
+
+    ProjectType:
+      type: string
+      description: 项目类型（ERD §5.1）
+      enum: [study, skill_development, challenge, deliverable]
+
+    DeadlineType:
+      type: string
+      description: none 时 deadline_at 必须为空；soft / fixed 时必填（ERD §5.1）
+      enum: [none, soft, fixed]
+
+    GoalType:
+      type: string
+      enum: [outcome, performance, completion]
+
+    GoalStatus:
+      type: string
+      enum: [active, achieved, cancelled]
+
+    Contribution:
+      type: string
+      description: 目标-阶段关联的贡献程度（ERD GoalStage）
+      enum: [primary, supporting]
+
+    RoadmapStatus:
+      type: string
+      enum: [draft, active, superseded]
+
+    RoadmapSource:
+      type: string
+      enum: [user, ai, template]
+
+    StageStatus:
+      type: string
+      enum: [pending, active, completed, skipped]
+
+    CompletionMethod:
+      type: string
+      enum: [user, system_confirmed, ai_suggested]
+
+    MilestoneStatus:
+      type: string
+      enum: [pending, in_progress, completed, skipped]
+
+    TaskStatus:
+      type: string
+      enum: [todo, in_progress, blocked, completed, cancelled]
+
+    CreatedSource:
+      type: string
+      enum: [user, ai, template]
+
+    DependencyType:
+      type: string
+      description: ERD §5.1 仅定义 finish_to_start
+      enum: [finish_to_start]
+
+    # ==================== 学习规划模块：项目 ====================
+
+    ProjectItem:
+      type: object
+      description: 学习项目（ERD §5.1）；owner_id 不外露（隐含为当前用户）
+      required: [id, name, project_type, status, importance_level, deadline_type, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        project_type:
+          $ref: "#/components/schemas/ProjectType"
+        status:
+          $ref: "#/components/schemas/ProjectStatus"
+        importance_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+        importance_override_until:
+          type: ["string", "null"]
+          format: date-time
+        deadline_type:
+          $ref: "#/components/schemas/DeadlineType"
+        deadline_at:
+          type: ["string", "null"]
+          format: date-time
+        archived_at:
+          type: ["string", "null"]
+          format: date-time
+        reopened_at:
+          type: ["string", "null"]
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProjectListData:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectItem"
+        total:
+          type: integer
+          format: int64
+
+    ProjectEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/ProjectItem"
+
+    ProjectListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/ProjectListData"
+
+    CreateProjectRequest:
+      type: object
+      description: status 不可指定（初始 draft）；importance_level 默认值待决策（D-19）
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        project_type:
+          $ref: "#/components/schemas/ProjectType"
+        importance_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+        importance_override_until:
+          type: string
+          format: date-time
+        deadline_type:
+          $ref: "#/components/schemas/DeadlineType"
+        deadline_at:
+          type: string
+          format: date-time
+
+    UpdateProjectRequest:
+      type: object
+      description: |
+        部分更新。status 与 owner 不在可更新字段内；deadline_type=fixed 时修改 deadline_at 返回 422（D-04）。
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        project_type:
+          $ref: "#/components/schemas/ProjectType"
+        importance_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+        importance_override_until:
+          type: ["string", "null"]
+          format: date-time
+        deadline_type:
+          $ref: "#/components/schemas/DeadlineType"
+        deadline_at:
+          type: ["string", "null"]
+          format: date-time
+
+    # ==================== 学习规划模块：目标 ====================
+
+    GoalItem:
+      type: object
+      description: 项目目标（ERD §5.1）
+      required: [id, project_id, title, goal_type, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        goal_type:
+          $ref: "#/components/schemas/GoalType"
+        target_definition:
+          type: [object, "null"]
+          description: 结构化目标定义（JSONB）；内部结构未锁定，契约不约束（D-08）
+        status:
+          $ref: "#/components/schemas/GoalStatus"
+        target_at:
+          type: ["string", "null"]
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    GoalListData:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoalItem"
+        total:
+          type: integer
+          format: int64
+
+    GoalEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/GoalItem"
+
+    GoalListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/GoalListData"
+
+    CreateGoalRequest:
+      type: object
+      description: status 不可指定（初始 active）
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        goal_type:
+          $ref: "#/components/schemas/GoalType"
+        target_definition:
+          type: object
+        target_at:
+          type: string
+          format: date-time
+
+    UpdateGoalRequest:
+      type: object
+      description: 部分更新；status 仅允许 active → achieved / cancelled（D-07）
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        goal_type:
+          $ref: "#/components/schemas/GoalType"
+        target_definition:
+          type: ["object", "null"]
+        target_at:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          $ref: "#/components/schemas/GoalStatus"
+
+    GoalStageItem:
+      type: object
+      description: 目标-阶段关联行（ERD GoalStage，复合主键）；不展开阶段详情
+      required: [goal_id, stage_id, contribution]
+      properties:
+        goal_id:
+          type: string
+          format: uuid
+        stage_id:
+          type: string
+          format: uuid
+        contribution:
+          $ref: "#/components/schemas/Contribution"
+
+    GoalStageListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/GoalStageItem"
+
+    GoalStageEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/GoalStageItem"
+
+    UpsertGoalStageRequest:
+      type: object
+      description: 幂等写入关联（复合主键决定）
+      required: [contribution]
+      properties:
+        contribution:
+          $ref: "#/components/schemas/Contribution"
+
+    # ==================== 学习规划模块：路线与阶段 ====================
+
+    RoadmapItem:
+      type: object
+      description: 项目路线（版本化，ERD §5.1）
+      required: [id, project_id, version, status, source, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        status:
+          $ref: "#/components/schemas/RoadmapStatus"
+        source:
+          $ref: "#/components/schemas/RoadmapSource"
+        change_summary:
+          type: ["string", "null"]
+        confirmed_at:
+          type: ["string", "null"]
+          format: date-time
+        created_by:
+          type: ["string", "null"]
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RoadmapListData:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoadmapItem"
+        total:
+          type: integer
+          format: int64
+
+    RoadmapEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/RoadmapItem"
+
+    RoadmapListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/RoadmapListData"
+
+    CreateRoadmapRequest:
+      type: object
+      description: version 与 status 由服务端决定；source=ai 须经 AI 提案与用户确认流程（本模块范围外）
+      properties:
+        source:
+          type: string
+          enum: [user, template]
+        change_summary:
+          type: string
+
+    UpdateRoadmapRequest:
+      type: object
+      description: 仅 draft 可编辑；status 与 version 不可直接修改（status 走 confirm）
+      properties:
+        change_summary:
+          type: ["string", "null"]
+
+    StageItem:
+      type: object
+      description: 路线阶段（ERD §5.1）
+      required: [id, roadmap_id, name, sequence_no, status, completion_method, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        roadmap_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        sequence_no:
+          type: integer
+        status:
+          $ref: "#/components/schemas/StageStatus"
+        completion_rule:
+          type: [object, "null"]
+          description: 可选完成条件（JSONB）；内部结构未锁定（D-08）
+        completion_method:
+          $ref: "#/components/schemas/CompletionMethod"
+        started_at:
+          type: ["string", "null"]
+          format: date-time
+        completed_at:
+          type: ["string", "null"]
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    StageListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/StageItem"
+
+    StageEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/StageItem"
+
+    CreateStageRequest:
+      type: object
+      description: sequence_no 省略时追加到路线末尾；status 初始 pending
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        sequence_no:
+          type: integer
+        completion_rule:
+          type: object
+
+    UpdateStageRequest:
+      type: object
+      description: 状态必须走动作端点（start / complete / skip / reactivate）
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        sequence_no:
+          type: integer
+        completion_rule:
+          type: ["object", "null"]
+
+    # ==================== 学习规划模块：里程碑 ====================
+
+    MilestoneItem:
+      type: object
+      description: 里程碑（ERD §5.1）
+      required: [id, stage_id, title, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        stage_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/MilestoneStatus"
+        completion_rule:
+          type: [object, "null"]
+          description: 可选完成条件（JSONB）；内部结构未锁定（D-08）
+        completed_at:
+          type: ["string", "null"]
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    MilestoneListData:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MilestoneItem"
+        total:
+          type: integer
+          format: int64
+
+    MilestoneEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/MilestoneItem"
+
+    MilestoneListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/MilestoneListData"
+
+    CreateMilestoneRequest:
+      type: object
+      description: stage_id 必填（里程碑必属阶段）；status 初始 pending
+      required: [stage_id, title]
+      properties:
+        stage_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        completion_rule:
+          type: object
+
+    UpdateMilestoneRequest:
+      type: object
+      description: 状态迁移边待决策（D-11）
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        completion_rule:
+          type: ["object", "null"]
+        status:
+          $ref: "#/components/schemas/MilestoneStatus"
+
+    # ==================== 学习规划模块：任务与依赖 ====================
+
+    TaskItem:
+      type: object
+      description: 学习任务（ERD §5.1）
+      required: [id, project_id, title, status, priority, created_source, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        milestone_id:
+          type: ["string", "null"]
+          format: uuid
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 5
+        due_at:
+          type: ["string", "null"]
+          format: date-time
+        estimated_minutes:
+          type: ["integer", "null"]
+          minimum: 0
+        completed_at:
+          type: ["string", "null"]
+          format: date-time
+        created_source:
+          $ref: "#/components/schemas/CreatedSource"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TaskListData:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskItem"
+        total:
+          type: integer
+          format: int64
+
+    TaskEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/TaskItem"
+
+    TaskListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/TaskListData"
+
+    CreateTaskRequest:
+      type: object
+      description: milestone_id 可空；created_source 固定 user；status 初始 todo；priority 默认值待决策（D-19）
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        milestone_id:
+          type: string
+          format: uuid
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 5
+        due_at:
+          type: string
+          format: date-time
+        estimated_minutes:
+          type: integer
+          minimum: 0
+
+    UpdateTaskRequest:
+      type: object
+      description: 状态迁移边待决策（D-11）；进入 completed 时服务端写 completed_at
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        milestone_id:
+          type: ["string", "null"]
+          format: uuid
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 5
+        due_at:
+          type: ["string", "null"]
+          format: date-time
+        estimated_minutes:
+          type: ["integer", "null"]
+          minimum: 0
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+
+    TaskDependencyItem:
+      type: object
+      description: 任务依赖行（ERD TaskDependency，复合主键，无独立 id）
+      required: [task_id, depends_on_task_id, dependency_type]
+      properties:
+        task_id:
+          type: string
+          format: uuid
+          description: 后继任务
+        depends_on_task_id:
+          type: string
+          format: uuid
+          description: 前置任务
+        dependency_type:
+          $ref: "#/components/schemas/DependencyType"
+
+    TaskDependencyEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/TaskDependencyItem"
+
+    TaskDependencyListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/TaskDependencyItem"
+
+    CreateTaskDependencyRequest:
+      type: object
+      description: 两任务须同属该项目；禁止自依赖与环路（ERD §5.1）
+      required: [depends_on_task_id]
+      properties:
+        depends_on_task_id:
+          type: string
+          format: uuid
+        dependency_type:
+          $ref: "#/components/schemas/DependencyType"
