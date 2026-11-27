@@ -9,4 +9,5 @@ pub mod project;
 pub mod report;
 pub mod roadmap;
 pub mod schedule;
+pub mod task;
 pub mod user;
