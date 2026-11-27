@@ -146,7 +146,7 @@ pub async fn register_user(app: &Router, email: &str) -> String {
     let (status, envelope) = send_json::<AuthData>(
         app,
         Method::POST,
-        "/auth/register",
+        "/api/v1/auth/register",
         None,
         Some(json!({
             "email": email,
