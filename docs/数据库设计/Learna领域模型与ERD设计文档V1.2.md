@@ -26,6 +26,15 @@
 
 2026-11-27 二次核对另补入 §8.2 与 §5.1 两处**外键删除行为说明**（不是字段变更）：原文档只写「FK → X」，未定 `ON DELETE`，导致「软删任务 + 删阶段」在 Migration 层会外键违约，以及「删主目标」会把子目标升格为第二个主目标。修正依据见 ADR-006 §3 / §4、ADR-007 §6。
 
+**V1.2 增补记录（2026-11-27，ADR-009）**
+
+| 变更 | 位置 | 依据 |
+|---|---|---|
+| `LearningContent` 增 `body` / `body_format` / `source_url` | §5.2 | ADR-009；M03 §5 缺口「内容正文」 |
+| §12 第 16 项（正文存储形态）标记已定 | §12 | ADR-009 |
+
+文档版本仍为 **V1.2**：本次只给尚未建表的内容域补 3 个可空 / 带默认值的列，不涉及已确认实体、关系基数与删除语义；`learning_contents` 的 Migration（`0005`）尚未编写，故不构成既有实现的破坏性变更。
+
 **V1.1 变更记录（2026-11-27）**
 
 | 变更 | 位置 | 依据 |
@@ -612,13 +621,28 @@ roadmap（可用部分唯一索引实现）。
 
   parent_id               UUID                    自引用 FK，可空
 
-  metadata                JSONB                   仅放类型扩展属性
+  body                    TEXT                    NULL，正文源文本（ADR-009）
+
+  body_format             VARCHAR(20)             NOT NULL DEFAULT
+                                                  'markdown'；markdown /
+                                                  plain_text（ADR-009）
+
+  source_url              VARCHAR(2048)           NULL，出处链接，仅 http(s)
+                                                  （ADR-009）
+
+  metadata                JSONB                   仅放类型扩展属性；v1 恒
+                                                  NULL 且不对外暴露（ADR-009）
 
   created_source          VARCHAR(20)             user / ai_confirmed /
                                                   template
 
   status                  VARCHAR(20)             active / archived
   -----------------------------------------------------------------------
+
+**正文模型（ADR-009 已决策）**：`body` 存 Markdown / 纯文本源文本，
+`description` 是摘要（≤500）、`body` 是正文（≤100000），二者不互为兜底；
+`metadata` 在 v1 不读写、恒 `NULL`；附件不入内容域（归 M09 成果与 M05
+证据）。列表接口不返回 `body`。
 
 **不要**建立 `(owner_id, title)` 唯一约束。可建立
 `(owner_id, content_type)`
@@ -2048,7 +2072,7 @@ service。
 13. **统一附件登记表**：`LearningEvidence` / `QuestionAsset` / `ArtifactAsset` 三处各自持 `storage_key`，是否收敛为一张 `stored_assets`（含引用计数与清理策略）待定。
 14. **成果是否允许无项目归属**：V1.2 定为 `project_id NOT NULL`；若要支持「个人成果档案」，需改为可空并引入归属枚举，属模型变更而非补列。
 15. **生活记录的其他身体指标**：PRD 只列「体重等」，体脂率、围度、睡眠质量等未列举，暂不加列。
-16. **学习内容的正文存储形态**：`LearningContent` 现有 `description TEXT`（摘要）与 `metadata JSONB`（类型扩展属性），二者都不适合放富文本 / LaTeX / 代码块正文。是新增 `body TEXT` + `body_format`，还是存对象存储并引用 `storage_key`，需在 M03 实现前定。
+16. ~~**学习内容的正文存储形态**~~ **已定（ADR-009）**：新增 `body TEXT` + `body_format`（`markdown` / `plain_text`）+ `source_url`；正文入库而**不进对象存储**（正文是业务事实，需要事务与检索），附件整体归 M09 成果 / M05 证据，内容域不带附件；`metadata` 在 v1 不读写、恒 `NULL`。
 
 ------------------------------------------------------------------------
 
