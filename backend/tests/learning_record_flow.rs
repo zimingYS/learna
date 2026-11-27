@@ -12,14 +12,19 @@ async fn records_require_auth(pool: PgPool) {
     let app = build_app(pool);
 
     let (status, envelope) =
-        send_json::<serde_json::Value>(&app, Method::GET, "/records", None, None).await;
+        send_json::<serde_json::Value>(&app, Method::GET, "/api/v1/records", None, None).await;
 
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert_eq!(envelope.code, "UNAUTHORIZED");
 
-    let (status, envelope) =
-        send_json::<serde_json::Value>(&app, Method::GET, "/records", Some("not-a-jwt"), None)
-            .await;
+    let (status, envelope) = send_json::<serde_json::Value>(
+        &app,
+        Method::GET,
+        "/api/v1/records",
+        Some("not-a-jwt"),
+        None,
+    )
+    .await;
 
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert_eq!(envelope.code, "UNAUTHORIZED");
@@ -34,7 +39,7 @@ async fn record_crud_roundtrip(pool: PgPool) {
     let (status, envelope) = send_json::<RecordData>(
         &app,
         Method::POST,
-        "/records",
+        "/api/v1/records",
         Some(&token),
         Some(json!({
             "title": "数据结构复习",
@@ -57,7 +62,7 @@ async fn record_crud_roundtrip(pool: PgPool) {
     let (status, envelope) = send_json::<RecordData>(
         &app,
         Method::GET,
-        &format!("/records/{record_id}"),
+        &format!("/api/v1/records/{record_id}"),
         Some(&token),
         None,
     )
@@ -71,8 +76,8 @@ async fn record_crud_roundtrip(pool: PgPool) {
     // 更新
     let (status, envelope) = send_json::<RecordData>(
         &app,
-        Method::PUT,
-        &format!("/records/{record_id}"),
+        Method::PATCH,
+        &format!("/api/v1/records/{record_id}"),
         Some(&token),
         Some(json!({"title": "数据结构强化", "duration_minutes": 60})),
     )
@@ -92,7 +97,7 @@ async fn record_crud_roundtrip(pool: PgPool) {
     let (status, envelope) = send_json::<serde_json::Value>(
         &app,
         Method::DELETE,
-        &format!("/records/{record_id}"),
+        &format!("/api/v1/records/{record_id}"),
         Some(&token),
         None,
     )
@@ -105,7 +110,7 @@ async fn record_crud_roundtrip(pool: PgPool) {
     let (status, envelope) = send_json::<serde_json::Value>(
         &app,
         Method::GET,
-        &format!("/records/{record_id}"),
+        &format!("/api/v1/records/{record_id}"),
         Some(&token),
         None,
     )
@@ -124,7 +129,7 @@ async fn list_paginates_and_counts_total(pool: PgPool) {
         let (status, _) = send_json::<RecordData>(
             &app,
             Method::POST,
-            "/records",
+            "/api/v1/records",
             Some(&token),
             Some(json!({"title": format!("记录{i}")})),
         )
@@ -135,7 +140,7 @@ async fn list_paginates_and_counts_total(pool: PgPool) {
     let (status, envelope) = send_json::<RecordListData>(
         &app,
         Method::GET,
-        "/records?page=1&page_size=2",
+        "/api/v1/records?page=1&page_size=2",
         Some(&token),
         None,
     )
@@ -156,7 +161,7 @@ async fn detail_of_other_user_is_not_found(pool: PgPool) {
     let (_, envelope) = send_json::<RecordData>(
         &app,
         Method::POST,
-        "/records",
+        "/api/v1/records",
         Some(&owner_token),
         Some(json!({"title": "私有记录"})),
     )
@@ -166,7 +171,7 @@ async fn detail_of_other_user_is_not_found(pool: PgPool) {
     let (status, envelope) = send_json::<serde_json::Value>(
         &app,
         Method::GET,
-        &format!("/records/{record_id}"),
+        &format!("/api/v1/records/{record_id}"),
         Some(&intruder_token),
         None,
     )
@@ -184,7 +189,7 @@ async fn update_without_fields_is_validation_error(pool: PgPool) {
     let (_, envelope) = send_json::<RecordData>(
         &app,
         Method::POST,
-        "/records",
+        "/api/v1/records",
         Some(&token),
         Some(json!({"title": "待更新"})),
     )
@@ -193,8 +198,8 @@ async fn update_without_fields_is_validation_error(pool: PgPool) {
 
     let (status, envelope) = send_json::<serde_json::Value>(
         &app,
-        Method::PUT,
-        &format!("/records/{record_id}"),
+        Method::PATCH,
+        &format!("/api/v1/records/{record_id}"),
         Some(&token),
         Some(json!({})),
     )
@@ -213,7 +218,7 @@ async fn delete_missing_record_is_not_found(pool: PgPool) {
     let (status, envelope) = send_json::<serde_json::Value>(
         &app,
         Method::DELETE,
-        &format!("/records/{missing_id}"),
+        &format!("/api/v1/records/{missing_id}"),
         Some(&token),
         None,
     )

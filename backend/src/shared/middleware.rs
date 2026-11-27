@@ -14,11 +14,29 @@ pub async fn request_id_middleware(mut req: Request, next: Next) -> Response {
 }
 
 /// JWT 身份认证中间件
+/// 错误响应同样携带真实 request_id，因此直接返回 Response
 pub async fn auth_middleware(
     State(state): State<AppState>,
     mut req: Request,
     next: Next,
-) -> Result<Response, AppError> {
+) -> Response {
+    let req_id = req
+        .extensions()
+        .get::<RequestId>()
+        .cloned()
+        .unwrap_or_default();
+
+    match authenticate(&state, &req) {
+        Ok(user_id) => {
+            req.extensions_mut().insert(user_id);
+            next.run(req).await
+        }
+        Err(err) => err.into_response_with_request_id(req_id.as_str()),
+    }
+}
+
+// 同步函数：避免跨 await 持有 &Request（Body 是 !Sync，future 会失去 Send）
+fn authenticate(state: &AppState, req: &Request) -> Result<UserId, AppError> {
     // 提取 Token
     let token = req
         .headers()
@@ -41,9 +59,5 @@ pub async fn auth_middleware(
     let user_id = Uuid::parse_str(token_data.claims.sub.as_str())
         .map_err(|_| AppError::Unauthorized("invalid token".to_string()))?;
 
-    // 注入扩展
-    req.extensions_mut().insert(UserId(user_id));
-
-    // 放行
-    Ok(next.run(req).await)
+    Ok(UserId(user_id))
 }

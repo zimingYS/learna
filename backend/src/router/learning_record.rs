@@ -6,5 +6,8 @@ use axum::routing::{get, post};
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", post(lr::create).get(lr::list))
-        .route("/{id}", get(lr::detail).put(lr::update).delete(lr::delete))
+        .route(
+            "/{id}",
+            get(lr::detail).patch(lr::update).delete(lr::delete),
+        )
 }

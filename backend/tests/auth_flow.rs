@@ -14,7 +14,7 @@ async fn register_returns_token_and_user(pool: PgPool) {
     let (status, envelope) = send_json::<AuthData>(
         &app,
         Method::POST,
-        "/auth/register",
+        "/api/v1/auth/register",
         None,
         Some(json!({
             "email": "alice@example.com",
@@ -43,7 +43,7 @@ async fn register_duplicate_email_is_validation_error(pool: PgPool) {
     let (status, envelope) = send_json::<serde_json::Value>(
         &app,
         Method::POST,
-        "/auth/register",
+        "/api/v1/auth/register",
         None,
         Some(json!({
             "email": "bob@example.com",
@@ -65,7 +65,7 @@ async fn login_with_valid_credentials_returns_token(pool: PgPool) {
     let (status, envelope) = send_json::<AuthData>(
         &app,
         Method::POST,
-        "/auth/login",
+        "/api/v1/auth/login",
         None,
         Some(json!({"email": "carol@example.com", "password": "passw0rd"})),
     )
@@ -85,7 +85,7 @@ async fn login_with_wrong_password_is_unauthorized(pool: PgPool) {
     let (status, envelope) = send_json::<serde_json::Value>(
         &app,
         Method::POST,
-        "/auth/login",
+        "/api/v1/auth/login",
         None,
         Some(json!({"email": "dave@example.com", "password": "wrong-pass"})),
     )
@@ -102,7 +102,7 @@ async fn login_with_unknown_email_is_unauthorized(pool: PgPool) {
     let (status, envelope) = send_json::<serde_json::Value>(
         &app,
         Method::POST,
-        "/auth/login",
+        "/api/v1/auth/login",
         None,
         Some(json!({"email": "nobody@example.com", "password": "passw0rd"})),
     )

@@ -5,6 +5,9 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 
+use super::error::AppResult;
+use super::types::RequestId;
+
 /// 成功业务码
 pub const CODE_OK: &str = "200";
 
@@ -53,5 +56,22 @@ impl<T> ApiResponse<T> {
 impl<T: Serialize> IntoResponse for ApiResponse<T> {
     fn into_response(self) -> Response {
         (StatusCode::OK, axum::Json(self)).into_response()
+    }
+}
+
+/// 处理器统一返回值：成功与失败响应都携带真实 request_id
+pub struct ApiReply<T>(pub AppResult<T>, pub RequestId);
+
+impl<T: Serialize> IntoResponse for ApiReply<T> {
+    fn into_response(self) -> Response {
+        let id = self.1.as_str().to_string();
+        match self.0 {
+            Ok(data) => (
+                StatusCode::OK,
+                axum::Json(ApiResponse::ok(data).with_request_id(id)),
+            )
+                .into_response(),
+            Err(err) => err.into_response_with_request_id(&id),
+        }
     }
 }

@@ -87,8 +87,10 @@ impl AppError {
     }
 }
 
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
+impl AppError {
+    /// 转换为错误响应，必须携带中间件生成的真实 request_id
+    /// （不实现 `IntoResponse`，从编译层面杜绝空 request_id 的错误响应）
+    pub fn into_response_with_request_id(self, request_id: &str) -> Response {
         let status = self.status_code();
         let message = match &self {
             // 5xx 细节进日志，对外只给概括（避免泄漏内部结构）
@@ -102,7 +104,7 @@ impl IntoResponse for AppError {
             }
             other => other.to_string(),
         };
-        let body = ApiResponse::<()>::error(self.code(), message);
+        let body = ApiResponse::<()>::error(self.code(), message).with_request_id(request_id);
         (status, axum::Json(body)).into_response()
     }
 }

@@ -6,5 +6,5 @@ pub mod response;
 pub mod types;
 
 pub use error::{AppError, AppResult};
-pub use response::{ApiResponse, CODE_OK};
+pub use response::{ApiReply, ApiResponse, CODE_OK};
 pub use types::RequestId;
