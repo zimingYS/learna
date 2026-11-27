@@ -253,20 +253,20 @@ paths:
     get:
       tags: [projects]
       summary: 项目列表
-      description: "默认排除已归档（PRD §4.3，D-15）；排序固定 updated_at DESC, id DESC（ERD §7 索引建议）。查归档项目须显式传 include_archived=true。"
+      description: "默认排除已归档（PRD §4.3，D-15）；排序固定 updated_at DESC, id DESC（ERD §7 索引建议）。未指定 `status` 时查归档须传 include_archived=true；直接传 `status=archived` 亦可。"
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
         - name: status
           in: query
           required: false
-          description: 按项目状态过滤（单值；不支持多值，以免破坏 (owner_id, status, updated_at DESC) 索引）
+          description: 按项目状态过滤（单值；不支持多值，以免破坏 (owner_id, status, updated_at DESC) 索引）。显式取值优先于「默认排除归档」，`status=archived` 可单独使用
           schema:
             $ref: "#/components/schemas/ProjectStatus"
         - name: include_archived
           in: query
           required: false
-          description: 为 true 时结果包含 archived 项目（与 status 互不排斥，取交集）
+          description: 仅在未指定 `status` 时生效：为 true 则在默认视图中额外包含 archived。指定 `status` 后过滤结果已由 status 决定，本参数不再参与
           schema:
             type: boolean
             default: false
