@@ -37,7 +37,7 @@ const navItems: { to: string; label: string; paths: string[] }[] = [
   },
   {
     to: "/roadmaps",
-    label: "路线图",
+    label: "规划工作台",
     paths: ["m9 4 6 2 6-2v12l-6 2-6-2-6 2V6Z", "M9 4v12M15 6v12"],
   },
   { to: "/reports", label: "报告", paths: ["M6 20v-6M12 20V6M18 20v-9", "M3 20h18"] },
