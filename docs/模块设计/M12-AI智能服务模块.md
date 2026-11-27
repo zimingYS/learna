@@ -1,7 +1,7 @@
 # M12 AI 智能服务模块
 
-**契约状态：** §4.8 AI 提案接口 ❓ 未设计；内部端点 2 个 501 占位、3 个空路由
-**实现状态：** Rust 侧 `ai_task` / `plan_change` 空壳 + `AiClient` ✅ 可用；Python 侧骨架可启动、端点未实现
+**契约状态：** §4.8 AI 提案接口 ❓ 未设计；内部端点 5 个 501 占位（roadmaps / plans / learning / reports / documents）
+**实现状态：** Rust 侧 `ai_task` / `plan_change` 空壳 + `AiClient` ✅ 可用；Python 侧骨架可启动、内部鉴权 ✅ fail-closed（启动期 + 请求期双闸门）、端点未实现
 **依据：** PRD §14（AI 能力与密钥管理）、§3.2（AI 深度学习分析属后续版本）、§18 第 16 项（占位接口契约未定）；ERD §5.5 `ChangeProposal`；TAD §6.4（异步任务机制）、§11.9
 
 ## 1. 职责与边界
@@ -61,18 +61,18 @@ backend/src/infrastructure/ai_client/   ✅
 ├── mod.rs                          # pub use client::AiClient
 └── client.rs                       # new / post_internal（30s 超时、错误截断、token）
 
-ai-service/                         🟡 骨架
-├── app/main.py                     # FastAPI 实例 + /healthz + 挂 /internal
+ai-service/                         🟡 骨架（鉴权已收紧）
+├── app/main.py                     # FastAPI 实例 + lifespan 启动闸门 + /healthz + 挂 /internal
 ├── app/api/internal/
 │   ├── router.py                   # prefix=/internal，统一 require_internal_token
-│   ├── auth.py                     # X-Internal-Token 校验，错误走 ApiResponse 信封
+│   ├── auth.py                     # X-Internal-Token 校验（fail-closed），错误走 ApiResponse 信封
 │   ├── roadmaps.py                 # POST /internal/roadmaps/generate        → 501
 │   ├── plans.py                    # POST /internal/plans/propose-adjustment → 501
-│   ├── learning.py                 # 空 router
-│   ├── reports.py                  # 空 router
-│   └── documents.py                # 空 router
+│   ├── learning.py                 # POST /internal/learning/analyze         → 501
+│   ├── reports.py                  # POST /internal/reports/generate         → 501
+│   └── documents.py                # POST /internal/documents/parse          → 501
 ├── app/schemas/base.py             # ApiResponse + schema_version="v1"
-└── app/config/settings.py          # pydantic-settings，目前只有 ai_service_token
+└── app/config/settings.py          # pydantic-settings（ai_service_token + internal_token 归一化）
 ```
 
 **为什么 Python 侧不按业务模块拆**：Python 的职责是「文本进、结构化 JSON 出」，它**不理解领域模型**——它不知道什么是 `superseded` 路线，也不需要知道。按业务拆成 12 个包会诱导把领域规则写进提示词与 Python 代码，形成两套规则。现状的「按端点类型拆（roadmaps / plans / learning / reports / documents）」是对的：一个端点对应一类产出结构。
@@ -140,7 +140,7 @@ Rust 的 `post_internal` 只判断 HTTP 状态与反序列化，**不解析 `cod
              state.ai_client.post_internal::<PythonReq, PythonResp>(
                  "/internal/roadmaps/generate", &body)
                - 30s 超时
-               - header X-Internal-Token（缺失时为空并 debug 日志）
+               - header X-Internal-Token（未配置时省略，ai-service 回 503 并 debug 记日志）
                - 非 2xx → AppError::Upstream（body 截断 200 字符）
         4. **校验返回结构**（serde 反序列化 + 业务校验：阶段数上限、字段非空、层级合法）
         5. 事务：写 `roadmaps`（status=draft）+ `stages`（created_source='ai'）
@@ -246,6 +246,7 @@ A 的代价与 M02 的 `purge` 级联同构（`README.md` §2 依赖规则 2 已
 | ai-service 不可达 / 超时 / 5xx | `Upstream` | 502 | detail 保留（便于定位），但截断 200 字符 |
 | AI 返回结构不合预期 | `Upstream` | 502 | **不要映射为 500**——这是上游问题，不是本站 bug |
 | 内部 token 不匹配（Python 侧） | — | 401 | body 为 Python 的 `ApiResponse.error("40101", …)` |
+| 内部 token 未配置（Python 侧） | — | 503 | `code=INTERNAL_AUTH_UNCONFIGURED`；启动期已拦，此处是纵深防御 |
 | 提案不存在 / 非本人 | `NotFound` | 404 | |
 | 提案已处理（非 `pending`）再接受 | `Conflict` | 409 | |
 | 提案已过期 | `Conflict` | 409 | 若保留 `expired` 状态 |

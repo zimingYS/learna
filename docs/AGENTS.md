@@ -125,6 +125,7 @@ Learna 是 Monorepo，包含：
 - `AI_SERVICE_TOKEN` 与 `LLM_API_KEY` 必须区分。
 - 不得提交真实密钥、密码或隐私数据。
 - 不得绕过现有权限机制。
+- 内部服务鉴权必须 fail-closed：`AI_SERVICE_TOKEN` 未配置时 ai-service 启动失败，`/internal/*` 一律拒绝（503 `INTERNAL_AUTH_UNCONFIGURED`），任何情况下不得降级为放行（详见 `docs/工程规范/安全与AI约束.md` §5）。
 
 ---
 

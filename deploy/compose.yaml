@@ -34,7 +34,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-learna}:${POSTGRES_PASSWORD:?必须设置 POSTGRES_PASSWORD（生产密钥禁止使用默认值）}@postgres:5432/${POSTGRES_DB:-learna}
       DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-10}
       AI_SERVICE_BASE_URL: http://ai-service:8001
-      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:?必须设置 AI_SERVICE_TOKEN（内部服务鉴权密钥，禁止留空）}
       STORAGE_PROVIDER: local
       STORAGE_ROOT_DIR: /data/uploads
       RUST_LOG: ${RUST_LOG:-info}
@@ -45,7 +45,8 @@ services:
   ai-service:
     build: ../ai-service
     environment:
-      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
+      # 未配置即启动失败（fail-closed），不允许以无鉴权状态对外暴露 /internal
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:?必须设置 AI_SERVICE_TOKEN（内部服务鉴权密钥，禁止留空）}
     expose:
       - "8001"
     restart: unless-stopped

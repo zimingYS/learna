@@ -24,8 +24,8 @@ impl AiClient {
 
         if token.is_none() {
             warn!(
-                "AI_SERVICE_TOKEN not configured; \
-                 requests to ai-service will be sent without Authorization header"
+                "AI_SERVICE_TOKEN not configured; ai-service will refuse internal requests \
+                 with 503 until it is set"
             );
         }
 
@@ -61,7 +61,7 @@ impl AiClient {
 
             None => {
                 debug!(
-                    "AI_SERVICE_TOKEN not configured, sending X-Internal-Token empty for {}",
+                    "AI_SERVICE_TOKEN not configured, omitting X-Internal-Token for {}",
                     path
                 );
             }
