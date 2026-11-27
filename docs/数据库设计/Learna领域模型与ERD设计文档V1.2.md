@@ -26,14 +26,17 @@
 
 2026-11-27 二次核对另补入 §8.2 与 §5.1 两处**外键删除行为说明**（不是字段变更）：原文档只写「FK → X」，未定 `ON DELETE`，导致「软删任务 + 删阶段」在 Migration 层会外键违约，以及「删主目标」会把子目标升格为第二个主目标。修正依据见 ADR-006 §3 / §4、ADR-007 §6。
 
-**V1.2 增补记录（2026-11-27，ADR-009）**
+**V1.2 增补记录（2026-11-27，ADR-009 / ADR-010）**
 
 | 变更 | 位置 | 依据 |
 |---|---|---|
 | `LearningContent` 增 `body` / `body_format` / `source_url` | §5.2 | ADR-009；M03 §5 缺口「内容正文」 |
+| `LearningSession` 增 `created_at` / `updated_at` / `deleted_at` | §5.3 | ADR-010 §7；PRD §16.2 |
+| 新增 §8.3 学习活动域 9 根外键的 `ON DELETE` 行为 | §8.3 | ADR-010 §5；ADR-006 |
+| §12 第 4、5、8 项标记已定或部分已定 | §12 | ADR-010 |
 | §12 第 16 项（正文存储形态）标记已定 | §12 | ADR-009 |
 
-文档版本仍为 **V1.2**：本次只给尚未建表的内容域补 3 个可空 / 带默认值的列，不涉及已确认实体、关系基数与删除语义；`learning_contents` 的 Migration（`0005`）尚未编写，故不构成既有实现的破坏性变更。
+文档版本仍为 **V1.2**：内容域与学习活动域的 Migration（`0005` / `0006`）尚未编写，本次新增列与新增小节不构成对既有实现的破坏性变更。
 
 **V1.1 变更记录（2026-11-27）**
 
@@ -761,12 +764,23 @@ roadmap（可用部分唯一索引实现）。
   next_steps              TEXT                    NULL
 
   created_source          VARCHAR(20)             user / timer / imported
+
+  created_at              TIMESTAMPTZ             NOT NULL DEFAULT now()，
+                                                  录入时间（补录场景可远晚于
+                                                  started_at，ADR-010 §7）
+
+  updated_at              TIMESTAMPTZ             NOT NULL DEFAULT now()
+
+  deleted_at              TIMESTAMPTZ             可空；第二个软删对象
+                                                  （ADR-010 决策 3）
   -----------------------------------------------------------------------
 
 约束： - `ended_at >= started_at`。 - `duration_minutes`
-应由服务端根据时间区间或用户确认的有效学习时长生成，不能仅信任前端。 -
+应由服务端根据时间区间或用户确认的有效学习时长生成，不能仅信任前端。
+ADR-010 已把该规则落为 `min(用户上报, 区间分钟数)`，上报超区间即 422。 -
 `primary_project_id` 若非空，项目 owner 必须等于 session owner。 -
-主要项目最多一个；不允许通过多条关联复制时长。
+主要项目最多一个；不允许通过多条关联复制时长。 - 软删后所有列表、详情与聚合
+查询必须带 `deleted_at IS NULL`。
 
 #### SessionProject
 
@@ -1871,6 +1885,26 @@ ReviewItem 建立部分唯一索引，避免同一上下文重复启用同类型
 - **软删任务时物理删其依赖行**：软删是 `UPDATE`，不触发 `ON DELETE CASCADE`。`task_dependencies` 的 `CASCADE` 只在项目 `purge` 真正 `DELETE` 任务行时生效。
 - **影响面计数**：DB 级联不返回「删了几个子行」，`DeletionConflict.impact` 必须在删除前单独 `SELECT COUNT(*)`。
 
+### 8.3 学习活动域外键删除行为（ADR-010 补充）
+
+按 §8.2 同一套判据推导，**项目 `purge` 时学习记录保留并解挂**（ADR-010 §5 / D-20）：
+
+| 子表.列 | 父表 | `ON DELETE` | 归属性质 | 理由 |
+|---|---|---|---|---|
+| `learning_sessions.primary_project_id` | `learning_projects` | `SET NULL` | 可选归属 | 记录是事实，项目是容器；删容器不销毁事实 |
+| `session_projects.session_id` | `learning_sessions` | `CASCADE` | 纯关联 | 无独立历史 |
+| `session_projects.project_id` | `learning_projects` | `CASCADE` | 纯关联 | 随项目消失 |
+| `session_contents.session_id` | `learning_sessions` | `CASCADE` | 纯关联 | 无独立历史 |
+| `session_contents.content_id` | `learning_contents` | `CASCADE` | 纯关联 | 内容 `purge` 前置条件已保证引用为 0，此处为兜底 |
+| `task_sessions.task_id` | `learning_tasks` | `CASCADE` | 纯关联 | 分摊行不承载事实 |
+| `task_sessions.session_id` | `learning_sessions` | `CASCADE` | 纯关联 | 同上 |
+| `learning_evidence.session_id` | `learning_sessions` | `SET NULL` | 可选归属 | 证据有独立价值，session 消失后仍保留 |
+| `learning_evidence.owner_id` | `users` | `CASCADE` | 归属根 | 用户注销即清空 |
+
+**软删的连带**：`learning_sessions.deleted_at` 是 `UPDATE`，不触发任何级联（ADR-007 §6）。软删后 `session_projects` / `session_contents` / `task_sessions` / `learning_evidence.session_id` 全部保留，靠查询层 `deleted_at IS NULL` 过滤——这是 ADR-010 决策 3 的前提条件，实现时不得改成物理删。
+
+**同一张表两套行为**：`session_contents.content_id` 用 `CASCADE` 与 `project_contents` 的关联行语义一致（纯关联）；内容本体的 `purge` 前置条件（D-26）已保证此时引用为 0，级联只是兜底。
+
 ------------------------------------------------------------------------
 
 ## 9. 状态枚举建议
@@ -2059,12 +2093,11 @@ service。
 2.  **各题型的 `answer_payload` JSON Schema**：V1.2 已锁定题库 11 张表的实体与关系（§5.7），
     但 9 种题型的答案结构仍需逐个定义，否则 `answer_schema_version` 无处落地。
 3.  **语言学习内容扩展模型**：词形、词性、释义、例句、发音、词族及语言专属复习策略。
-4.  **学习活动计时规则**：暂停、跨午夜、手动补录、有效时长修正和审计。
-5.  **项目删除时学习记录的处置**（契约决策 D-20，已移交 P1）：v1 的 `purge`
-    只删规划域数据；`LearningSession` 设计时须决定「主要归属学习记录」是一并删除还是解挂保留为个人历史。
+4.  ~~**学习活动计时规则**~~ **已定（ADR-010）**：客户端本地计时 + 事后补录（同一端点），**不建 `active_timers` 表**、不提供 `start/pause/resume/stop` 端点；跨午夜按真实区间计算；有效时长 = `min(用户上报, 区间分钟数)`；改时长不留审计（审计表仍未设计）。
+5.  ~~**项目删除时学习记录的处置**（D-20）~~ **已定（ADR-010 §5）**：**保留并解挂** —— `learning_sessions.primary_project_id` 用 `SET NULL`、`session_projects` 行用 `CASCADE`。记录是事实、项目是容器，删容器不销毁事实。
 6.  **个人总体掌握算法**：证据权重、时间衰减、冲突处理、置信度校准。
 7.  **复习共享的具体语义**：共享仅作为证据，还是允许用户将复习结果转化为目标项目的评价输入。
-8.  **数据隐私与附件授权**：证据跨项目查看的权限、撤销机制及健康数据授权边界。
+8.  ~~**数据隐私与附件授权**~~ **部分已定（ADR-010 §4）**：证据的「跨项目可见性」在本项目里是伪问题（所有数据同一 `owner`，跨项目不是隔离边界）；v1 只开放 `note` / `link` / `test_result` 三类文本/链接证据，文件类待统一附件登记表。健康数据授权边界仍待定（M10）。
 9.  **多时区策略**：用户时区变更后，历史 `DATE` 与时间戳如何解释。
 10. **并发与审计**：关键状态迁移的乐观锁、幂等键、审计事件和事务边界。
 11. **「有效学习日」判定算法**：PRD §5.4 要求结合活动内容评估并允许用户纠正，V1.2 只落了规则表（§5.6 `ProjectCommitmentRule`），未定义判定口径与阈值。

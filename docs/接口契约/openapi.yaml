@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Learna API
-  version: "1.5.0"
+  version: "1.6.0"
   description: |
     Learna 接口契约（已确认接口）。
 
@@ -26,7 +26,14 @@ info:
       （附件归 M09 成果 / M05 证据）。
     - 掌握结论（`project_contents.current_status = achieved`）只能由评价流程写入：用户提交
       `achieved` 返回 409（D-27），与 ADR-007 的动作型状态迁移刻意不同。
-    - 其余未确认业务接口（learning-sessions / mastery / reviews / AI 提案等）不收录于此。
+    - 学习活动模块（learning-sessions / evidence）为**已设计、未实现**（x-learna-status: designed），
+      依据见 docs/接口契约/设计记录/学习活动与证据契约设计.md；7 项决策已落定（D-30 ~ D-36），
+      D-20 由 ADR-010 §5 关闭。
+    - 学习活动**无状态机**、**无服务端计时**（ADR-010）：客户端本地计时或事后补录，同一端点提交；
+      有效时长 = `min(用户上报, 区间分钟数)`，超区间 422。
+    - 学习活动删除为**软删**（`deleted_at`），对客户端表现为 404；所有聚合必须排除软删行。
+      软删标记本身不对外暴露（ADR-007 契约最小承诺）。
+    - 其余未确认业务接口（mastery / reviews / AI 提案等）不收录于此。
   license:
     name: PolyForm Noncommercial 1.0.0
 servers:
@@ -59,6 +66,10 @@ tags:
     description: 内容标签词表与内容打标（已设计，未实现）
   - name: project-contents
     description: 内容与项目的关联上下文（已设计，未实现）
+  - name: learning-sessions
+    description: 正式学习活动与三类关联（已设计，未实现）
+  - name: evidence
+    description: 学习证据（文本 / 链接 / 测试结果，已设计，未实现）
 
 paths:
   /healthz:
@@ -1953,6 +1964,347 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # ==================== M05 学习活动与证据域 ====================
+
+  /api/v1/learning-sessions:
+    x-learna-module: learning-activity
+    x-learna-status: designed
+    get:
+      tags: [learning-sessions]
+      summary: 学习活动列表
+      description: |
+        分页列表；默认排除软删（`deleted_at IS NULL`）。排序固定 `started_at DESC, id DESC`。
+        `from` / `to` 过滤实际发生时间（半开区间 `[from, to)`）。
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: primary_project_id
+          in: query
+          description: 按主要归属项目过滤
+          schema:
+            type: string
+            format: uuid
+        - name: content_id
+          in: query
+          description: 按关联内容过滤（经 session_contents）
+          schema:
+            type: string
+            format: uuid
+        - name: activity_type
+          in: query
+          schema:
+            $ref: "#/components/schemas/ActivityType"
+        - name: from
+          in: query
+          description: started_at 下界（含）
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: started_at 上界（不含）
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: 分页列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    post:
+      tags: [learning-sessions]
+      summary: 记录一次学习活动
+      description: |
+        主表与三类关联一次提交（关联均可选），**单事务**。有效时长 = `min(用户上报, 区间分钟数)`；
+        上报超过区间返回 422（ADR-010 §1）。`created_source` 只接受 `user` / `timer`，`imported`
+        仅迁移脚本使用（API 传即 422）。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/learning-sessions/{session_id}:
+    x-learna-module: learning-activity
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+    get:
+      tags: [learning-sessions]
+      summary: 学习活动详情
+      description: 内联 `related_project_ids` / `contents` / `tasks`，一次往返拿到全部关联。
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [learning-sessions]
+      summary: 更新学习活动
+      description: |
+        部分更新（三态）。改 `started_at` / `ended_at` / `duration_minutes` 时按同一规则重算校验
+        （时长不得超过新区间）。关联不通过本端点修改，走三个 `PUT` 子资源。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSessionRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [learning-sessions]
+      summary: 删除学习活动
+      description: |
+        软删（`deleted_at`），幂等。关联行与证据**保留**（软删是 UPDATE，不触发级联）；
+        软删后详情、列表与所有聚合均排除该记录（ADR-010 决策 3）。
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/learning-sessions/{session_id}/contents:
+    x-learna-module: learning-activity
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+    put:
+      tags: [learning-sessions]
+      summary: 整体替换关联内容
+      description: |
+        整体替换 + 单事务；空数组表示清空。重复 `content_id` → 422；内容非本人 → 404。
+        不提供 `GET`：详情接口已内联返回同一份数据。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetSessionContentsRequest"
+      responses:
+        "200":
+          description: 替换后的关联内容
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionContentListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/learning-sessions/{session_id}/projects:
+    x-learna-module: learning-activity
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+    put:
+      tags: [learning-sessions]
+      summary: 整体替换关联项目
+      description: |
+        只替换 **related** 项目；主要项目由 `primary_project_id` 唯一表达（ERD §5.3 推荐方案，
+        避免双重事实）。`project_ids` 含主要项目 → 422；含他人项目 → 404。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetSessionProjectsRequest"
+      responses:
+        "200":
+          description: 替换后的关联项目
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionProjectsEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/learning-sessions/{session_id}/tasks:
+    x-learna-module: learning-activity
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+    put:
+      tags: [learning-sessions]
+      summary: 整体替换任务贡献分摊
+      description: |
+        分摊只是归因，不构成第二个时长。同一 session 的 `contribution_minutes` 总和必须
+        ≤ `duration_minutes`，否则 422；任务必须属于该 session 的某个关联项目，否则 422。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetSessionTasksRequest"
+      responses:
+        "200":
+          description: 替换后的分摊明细
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionTaskListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/evidence:
+    x-learna-module: learning-activity
+    x-learna-status: designed
+    get:
+      tags: [evidence]
+      summary: 学习证据列表
+      description: 分页；排序固定 `created_at DESC, id DESC`；`session_id` 为空时返回独立证据。
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: session_id
+          in: query
+          description: 按所属活动过滤
+          schema:
+            type: string
+            format: uuid
+        - name: evidence_type
+          in: query
+          schema:
+            $ref: "#/components/schemas/EvidenceType"
+        - name: from
+          in: query
+          description: created_at 下界（含）
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: created_at 上界（不含）
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: 分页列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvidenceListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    post:
+      tags: [evidence]
+      summary: 新增学习证据
+      description: |
+        v1 只开放 `note` / `link` / `test_result` 三类文本或链接证据；`code` / `image` / `file`
+        需要对象存储，暂不开放（ADR-010 §4）。`storage_key` / `mime_type` / `size_bytes`
+        无生产者，不出现在契约中。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEvidenceRequest"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvidenceEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/evidence/{evidence_id}:
+    x-learna-module: learning-activity
+    x-learna-status: designed
+    parameters:
+      - $ref: "#/components/parameters/EvidenceId"
+    get:
+      tags: [evidence]
+      summary: 证据详情
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvidenceEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [evidence]
+      summary: 删除证据
+      description: 物理删除，幂等。证据是快照，**不提供 PATCH**（改就删了重建）。
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2074,6 +2426,22 @@ components:
       in: path
       required: true
       description: 项目-内容关联 UUID
+      schema:
+        type: string
+        format: uuid
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      description: 学习活动 UUID
+      schema:
+        type: string
+        format: uuid
+    EvidenceId:
+      name: evidence_id
+      in: path
+      required: true
+      description: 学习证据 UUID
       schema:
         type: string
         format: uuid
@@ -3648,3 +4016,411 @@ components:
           maximum: 5
         auto_review_enabled:
           type: boolean
+
+    # ==================== 学习活动与证据域：枚举 ====================
+
+    ActivityType:
+      type: string
+      description: 这一次「干了什么」；与项目类型（长期方向）不是一回事。默认 mixed
+      enum: [theory, practice, review, mixed, other]
+
+    SessionSource:
+      type: string
+      description: |
+        只读字段 `created_source` 的三值。`imported` 仅迁移脚本写入，API 提交返回 422
+        （ADR-010 §2）。`timer` 是客户端自报，不是安全边界。
+      enum: [user, timer, imported]
+
+    SessionContributionType:
+      type: string
+      description: 这次活动对该内容的贡献方式（ERD SessionContent）
+      enum: [primary, covered, practiced]
+
+    EvidenceType:
+      type: string
+      description: |
+        v1 只开放三类文本 / 链接证据；`code` / `image` / `file` 需对象存储，延后开放
+        （ADR-010 §4）。
+      enum: [note, link, test_result]
+
+    # ==================== 学习活动与证据域：学习活动 ====================
+
+    SessionItem:
+      type: object
+      description: 列表视图（不含关联明细；详情接口内联返回）
+      required:
+        - id
+        - activity_type
+        - started_at
+        - ended_at
+        - duration_minutes
+        - created_source
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: ["string", "null"]
+          maxLength: 200
+        activity_type:
+          $ref: "#/components/schemas/ActivityType"
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+        duration_minutes:
+          type: integer
+          minimum: 0
+          description: 有效时长 = min(用户上报, 区间分钟数)，可小于区间（含暂停）
+        primary_project_id:
+          type: ["string", "null"]
+          format: uuid
+          description: 主要归属项目；项目被 purge 后为 null（记录保留）
+        created_source:
+          $ref: "#/components/schemas/SessionSource"
+        created_at:
+          type: string
+          format: date-time
+          description: 录入时间，补录场景可远晚于 started_at（PRD §16.2）
+
+    SessionContentItem:
+      type: object
+      required: [content_id, contribution_type]
+      properties:
+        content_id:
+          type: string
+          format: uuid
+        contribution_type:
+          $ref: "#/components/schemas/SessionContributionType"
+        note:
+          type: ["string", "null"]
+
+    SessionTaskItem:
+      type: object
+      required: [task_id, contribution_minutes]
+      properties:
+        task_id:
+          type: string
+          format: uuid
+        contribution_minutes:
+          type: integer
+          minimum: 0
+          description: 任务贡献分摊；同一 session 总和不得超过 duration_minutes
+        note:
+          type: ["string", "null"]
+
+    SessionDetailItem:
+      allOf:
+        - $ref: "#/components/schemas/SessionItem"
+        - type: object
+          required: [related_project_ids, contents, tasks]
+          properties:
+            summary:
+              type: ["string", "null"]
+            what_done:
+              type: ["string", "null"]
+            problems:
+              type: ["string", "null"]
+            next_steps:
+              type: ["string", "null"]
+            related_project_ids:
+              type: array
+              description: 只含 related；主要项目见 primary_project_id
+              items:
+                type: string
+                format: uuid
+            contents:
+              type: array
+              items:
+                $ref: "#/components/schemas/SessionContentItem"
+            tasks:
+              type: array
+              items:
+                $ref: "#/components/schemas/SessionTaskItem"
+
+    SessionListData:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionItem"
+        total:
+          type: integer
+          format: int64
+
+    SessionListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/SessionListData"
+
+    SessionEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/SessionDetailItem"
+
+    CreateSessionRequest:
+      type: object
+      description: |
+        主表 + 三类关联一次提交（单事务）。`duration_minutes` 可选：缺省取区间分钟数；
+        给出时不得超过区间，否则 422。四段式描述全部可选。
+      required: [started_at, ended_at]
+      properties:
+        title:
+          type: ["string", "null"]
+          maxLength: 200
+        activity_type:
+          $ref: "#/components/schemas/ActivityType"
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+        duration_minutes:
+          type: integer
+          minimum: 0
+        primary_project_id:
+          type: ["string", "null"]
+          format: uuid
+        related_project_ids:
+          type: array
+          description: 不含主要项目（重复给出 → 422）
+          items:
+            type: string
+            format: uuid
+        contents:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionContentItem"
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionTaskItem"
+        summary:
+          type: ["string", "null"]
+        what_done:
+          type: ["string", "null"]
+        problems:
+          type: ["string", "null"]
+        next_steps:
+          type: ["string", "null"]
+        created_source:
+          type: string
+          description: 只接受 user / timer（ADR-010 §2）
+          enum: [user, timer]
+
+    UpdateSessionRequest:
+      type: object
+      description: |
+        部分更新（三态）。关联不在此端点修改（走三个 `PUT`）。改时间或时长时按同一规则重算校验。
+      properties:
+        title:
+          type: ["string", "null"]
+          maxLength: 200
+        activity_type:
+          $ref: "#/components/schemas/ActivityType"
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+        duration_minutes:
+          type: integer
+          minimum: 0
+        primary_project_id:
+          type: ["string", "null"]
+          format: uuid
+        summary:
+          type: ["string", "null"]
+        what_done:
+          type: ["string", "null"]
+        problems:
+          type: ["string", "null"]
+        next_steps:
+          type: ["string", "null"]
+
+    SetSessionContentsRequest:
+      type: object
+      description: 整体替换；空数组清空。重复 content_id → 422
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionContentItem"
+
+    SessionContentListData:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionContentItem"
+        total:
+          type: integer
+          format: int64
+
+    SessionContentListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/SessionContentListData"
+
+    SetSessionProjectsRequest:
+      type: object
+      description: 只替换 related 项目；含主要项目 → 422，含他人项目 → 404
+      required: [project_ids]
+      properties:
+        project_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    SessionProjectsData:
+      type: object
+      required: [project_ids]
+      properties:
+        project_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    SessionProjectsEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/SessionProjectsData"
+
+    SetSessionTasksRequest:
+      type: object
+      description: 整体替换；分摊总和 > duration_minutes → 422；任务不属于关联项目 → 422
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionTaskItem"
+
+    SessionTaskListData:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionTaskItem"
+        total:
+          type: integer
+          format: int64
+
+    SessionTaskListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/SessionTaskListData"
+
+    # ==================== 学习活动与证据域：证据 ====================
+
+    EvidenceItem:
+      type: object
+      required: [id, evidence_type, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        session_id:
+          type: ["string", "null"]
+          format: uuid
+          description: 可空：证据可以独立存在（如随手记录的错题链接）
+        evidence_type:
+          $ref: "#/components/schemas/EvidenceType"
+        title:
+          type: ["string", "null"]
+          maxLength: 200
+        description:
+          type: ["string", "null"]
+          description: note / test_result 必填
+        external_url:
+          type: ["string", "null"]
+          format: uri
+          description: link 必填；仅 http(s)
+        created_at:
+          type: string
+          format: date-time
+
+    EvidenceListData:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvidenceItem"
+        total:
+          type: integer
+          format: int64
+
+    EvidenceListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/EvidenceListData"
+
+    EvidenceEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeMeta"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/EvidenceItem"
+
+    CreateEvidenceRequest:
+      type: object
+      description: |
+        `note` / `test_result` 必须给 `description`；`link` 必须给 `external_url`。
+        `storage_key` / `mime_type` / `size_bytes` 无生产者，不在请求中（ADR-010 §4）。
+      required: [evidence_type]
+      properties:
+        session_id:
+          type: ["string", "null"]
+          format: uuid
+        evidence_type:
+          $ref: "#/components/schemas/EvidenceType"
+        title:
+          type: ["string", "null"]
+          maxLength: 200
+        description:
+          type: ["string", "null"]
+        external_url:
+          type: ["string", "null"]
+          format: uri
