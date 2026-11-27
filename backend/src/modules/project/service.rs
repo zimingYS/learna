@@ -84,7 +84,8 @@ pub async fn list(
         FROM learning_projects
         WHERE owner_id = $1
           AND ($2::text IS NULL OR status = $2)
-          AND ($3::bool OR status <> 'archived')
+          -- 「默认排除归档」只在未指定 status 时生效：显式 status=archived 必须查得到
+          AND ($2::text IS NOT NULL OR $3::bool OR status <> 'archived')
         ORDER BY updated_at DESC, id DESC
         LIMIT $4 OFFSET $5
         "#
@@ -105,7 +106,7 @@ pub async fn list(
         FROM learning_projects
         WHERE owner_id = $1
           AND ($2::text IS NULL OR status = $2)
-          AND ($3::bool OR status <> 'archived')
+          AND ($2::text IS NOT NULL OR $3::bool OR status <> 'archived')
         "#,
     )
     .bind(owner_id)

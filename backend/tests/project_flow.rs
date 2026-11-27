@@ -277,6 +277,33 @@ async fn list_excludes_archived_by_default(pool: PgPool) {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(envelope.data.unwrap()["total"], 2);
+
+    // 显式按 archived 过滤必须查得到：默认排除只作用于「未指定 status」的列表
+    let (status, envelope) = send_json::<Value>(
+        &app,
+        Method::GET,
+        "/api/v1/projects?status=archived",
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let data = envelope.data.unwrap();
+    assert_eq!(data["total"], 1, "status=archived 应能直接查到归档项目");
+    assert_eq!(data["items"][0]["id"], archived_id);
+
+    // 按 status 过滤其他状态时同样只返回该状态
+    let (_, envelope) = send_json::<Value>(
+        &app,
+        Method::GET,
+        "/api/v1/projects?status=active",
+        Some(&token),
+        None,
+    )
+    .await;
+    let data = envelope.data.unwrap();
+    assert_eq!(data["total"], 1);
+    assert_eq!(data["items"][0]["id"], active_id);
 }
 
 #[sqlx::test]
@@ -574,6 +601,206 @@ async fn deleting_achieved_goal_returns_conflict(pool: PgPool) {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
+}
+
+#[sqlx::test]
+async fn archive_keeps_planning_children(pool: PgPool) {
+    let app = support::build_app(pool);
+    let token = register_user(&app, "proj-archive@example.com").await;
+    let pid = create_project(&app, &token, "归档保留子数据").await;
+
+    // 铺满规划域：目标 / 路线 / 阶段 / 任务
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::POST,
+        &format!("/api/v1/projects/{pid}/goals"),
+        Some(&token),
+        Some(json!({ "title": "主目标" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, roadmap) = send_json::<Value>(
+        &app,
+        Method::POST,
+        &format!("/api/v1/projects/{pid}/roadmaps"),
+        Some(&token),
+        Some(json!({ "change_summary": "初版" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let rid = roadmap.data.unwrap()["id"].as_str().unwrap().to_string();
+
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::POST,
+        &format!("/api/v1/projects/{pid}/roadmaps/{rid}/stages"),
+        Some(&token),
+        Some(json!({ "name": "第一阶段" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::POST,
+        &format!("/api/v1/projects/{pid}/tasks"),
+        Some(&token),
+        Some(json!({ "title": "任务一" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, envelope) = send_json::<Value>(
+        &app,
+        Method::POST,
+        &format!("/api/v1/projects/{pid}/archive"),
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let data = envelope.data.expect("归档应返回项目");
+    assert_eq!(data["status"], "archived");
+    assert!(!data["archived_at"].is_null(), "归档应写 archived_at");
+
+    // 归档 ≠ 删除：子数据必须全部还在
+    for path in ["goals", "roadmaps", "tasks"] {
+        let (status, envelope) = send_json::<Value>(
+            &app,
+            Method::GET,
+            &format!("/api/v1/projects/{pid}/{path}"),
+            Some(&token),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "归档后 {path} 应可读");
+        assert_eq!(
+            envelope.data.expect("列表应有数据")["total"],
+            1,
+            "归档后 {path} 应保留 1 条"
+        );
+    }
+
+    let (status, envelope) = send_json::<Value>(
+        &app,
+        Method::GET,
+        &format!("/api/v1/projects/{pid}/roadmaps/{rid}/stages"),
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "归档后阶段应可读");
+    assert_eq!(envelope.data.expect("列表应有数据")["total"], 1);
+}
+
+#[sqlx::test]
+async fn purge_only_removes_the_target_project(pool: PgPool) {
+    let app = support::build_app(pool);
+    let token = register_user(&app, "proj-purge-scope@example.com").await;
+
+    let doomed = create_project(&app, &token, "待销毁").await;
+    let kept = create_project(&app, &token, "应保留").await;
+
+    for pid in [&doomed, &kept] {
+        let (status, _) = send_json::<Value>(
+            &app,
+            Method::POST,
+            &format!("/api/v1/projects/{pid}/goals"),
+            Some(&token),
+            Some(json!({ "title": "项目目标" })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::POST,
+        &format!("/api/v1/projects/{doomed}/activate"),
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::POST,
+        &format!("/api/v1/projects/{doomed}/purge"),
+        Some(&token),
+        Some(json!({ "confirm_name": "待销毁" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::GET,
+        &format!("/api/v1/projects/{doomed}"),
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    // 同用户的另一个项目及其子数据不受影响（级联范围不得越界）
+    let (status, envelope) = send_json::<Value>(
+        &app,
+        Method::GET,
+        &format!("/api/v1/projects/{kept}"),
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(envelope.data.expect("应返回项目")["name"], "应保留");
+
+    let (status, envelope) = send_json::<Value>(
+        &app,
+        Method::GET,
+        &format!("/api/v1/projects/{kept}/goals"),
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        envelope.data.expect("目标应保留")["total"],
+        1,
+        "purge 不得删除其他项目的目标"
+    );
+}
+
+#[sqlx::test]
+async fn patch_rejects_empty_body_and_out_of_range_importance(pool: PgPool) {
+    let app = support::build_app(pool);
+    let token = register_user(&app, "proj-patch-invalid@example.com").await;
+    let pid = create_project(&app, &token, "校验").await;
+
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::PATCH,
+        &format!("/api/v1/projects/{pid}"),
+        Some(&token),
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "空 PATCH 应 422");
+
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::PATCH,
+        &format!("/api/v1/projects/{pid}"),
+        Some(&token),
+        Some(json!({ "importance_level": 9 })),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "importance_level 越界应 422 而非 DB CHECK 的 500"
+    );
 }
 
 #[sqlx::test]
