@@ -1,15 +1,16 @@
 openapi: 3.1.0
 info:
   title: Learna API
-  version: "1.6.0"
+  version: "1.6.1"
   description: |
     Learna 接口契约（已确认接口）。
 
     - 全局规范见 docs/接口契约/README.md；业务目录见 docs/接口契约/接口清单.md。
     - `/api/v1/records` 为**过渡实现**（x-learna-status: interim），不是正式 LearningSession 契约。
-    - 学习规划模块（projects / goals / roadmaps / stages / milestones / tasks）为**已设计、未实现**
-      （x-learna-status: designed），依据见 docs/接口契约/设计记录/学习规划模块契约设计.md；
-      该模块 23 项决策已全部落定（ADR-005 / ADR-006 / ADR-007），无待决策项。
+    - 学习规划模块（projects / goals / roadmaps / stages / milestones / tasks）**后端已实现**
+      （x-learna-status 统一为 designed，表示契约已冻结；实现进度以接口清单为准），依据见
+      docs/接口契约/设计记录/学习规划模块契约设计.md；该模块 23 项决策已全部落定
+      （ADR-005 / ADR-006 / ADR-007），无待决策项。
     - 删除语义按四层划分（ADR-006）：draft 容器级物理删除、已生效结构不提供删除、任务软删除、
       成果对象禁止删除。带子项的删除默认 409 并返回影响面，需显式 `?cascade=true`；删主目标时
       子目标随之一并删除，**不**升格为主目标。
@@ -1273,6 +1274,13 @@ paths:
           in: query
           required: false
           description: 按所属里程碑过滤
+          schema:
+            type: string
+            format: uuid
+        - name: stage_id
+          in: query
+          required: false
+          description: 按所属阶段过滤（直接挂在阶段上的任务，不含仅靠里程碑间接关联的任务）
           schema:
             type: string
             format: uuid

@@ -104,6 +104,108 @@ async fn goal_hierarchy_limits_to_two_levels(pool: PgPool) {
     assert_eq!(status, StatusCode::CONFLICT);
 }
 
+/// 两层上限的第二道防线：自身已有子目标时不允许再降为子目标。
+///
+/// 「每项目最多一个主目标」只有服务层校验（DB 无部分唯一索引），并发建目标仍可能
+/// 落下两个根目标；此处用 SQL 造出该状态，验证守卫不会让树变成三层。
+#[sqlx::test]
+async fn goal_with_children_cannot_be_demoted(pool: PgPool) {
+    let app = support::build_app(pool.clone());
+    let token = register_user(&app, "goal-demote@example.com").await;
+    let pid = create_project(&app, &token, "目标降级").await;
+
+    let primary = create_goal(&app, &token, &pid, json!({ "title": "主目标" })).await;
+    create_goal(
+        &app,
+        &token,
+        &pid,
+        json!({ "title": "子目标", "parent_goal_id": primary }),
+    )
+    .await;
+
+    let second_root = sqlx::query_scalar::<_, uuid::Uuid>(
+        "INSERT INTO project_goals (project_id, title) VALUES ($1, '遗留主目标') RETURNING id",
+    )
+    .bind(uuid::Uuid::parse_str(&pid).unwrap())
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::PATCH,
+        &format!("/api/v1/projects/{pid}/goals/{primary}"),
+        Some(&token),
+        Some(json!({ "parent_goal_id": second_root })),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "带子目标的目标不能降为子目标"
+    );
+}
+
+/// 任务列表按 stage_id / milestone_id 过滤（openapi 已登记的两个查询参数）
+#[sqlx::test]
+async fn task_list_filters_by_stage_and_milestone(pool: PgPool) {
+    let app = support::build_app(pool);
+    let token = register_user(&app, "task-filter@example.com").await;
+    let pid = create_project(&app, &token, "任务过滤").await;
+    let (rid, _) = create_roadmap(&app, &token, &pid).await;
+
+    let stage_a = create_stage(&app, &token, &pid, &rid, "基础").await;
+    let stage_b = create_stage(&app, &token, &pid, &rid, "强化").await;
+
+    let (status, envelope) = send_json::<Value>(
+        &app,
+        Method::POST,
+        &format!("/api/v1/projects/{pid}/milestones"),
+        Some(&token),
+        Some(json!({ "stage_id": stage_a, "title": "基础里程碑" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let milestone = envelope.data.unwrap()["id"].as_str().unwrap().to_string();
+
+    for body in [
+        json!({ "title": "挂阶段 A", "stage_id": stage_a, "milestone_id": milestone }),
+        json!({ "title": "挂阶段 B", "stage_id": stage_b }),
+        json!({ "title": "仅挂项目" }),
+    ] {
+        let (status, _) = send_json::<Value>(
+            &app,
+            Method::POST,
+            &format!("/api/v1/projects/{pid}/tasks"),
+            Some(&token),
+            Some(body),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    for (query, expected) in [
+        (format!("?stage_id={stage_a}"), 1),
+        (format!("?stage_id={stage_b}"), 1),
+        (format!("?milestone_id={milestone}"), 1),
+    ] {
+        let (status, envelope) = send_json::<Value>(
+            &app,
+            Method::GET,
+            &format!("/api/v1/projects/{pid}/tasks{query}"),
+            Some(&token),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(
+            envelope.data.unwrap()["total"].as_i64().unwrap(),
+            expected,
+            "过滤条件 {query} 命中数不符"
+        );
+    }
+}
+
 #[sqlx::test]
 async fn goal_delete_cascades_child_goals_with_confirmation(pool: PgPool) {
     let app = support::build_app(pool);
@@ -682,4 +784,56 @@ async fn roadmap_delete_detaches_tasks_and_removes_children(pool: PgPool) {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert!(envelope.data.unwrap()["stage_id"].is_null());
+}
+
+/// 阶段排序：省略顺序号时追加到末尾；显式顺序号冲突按 422 拒绝（不是 409 重试）
+#[sqlx::test]
+async fn stage_sequence_appends_by_default_and_rejects_duplicates(pool: PgPool) {
+    let app = support::build_app(pool);
+    let token = register_user(&app, "stage-seq@example.com").await;
+    let pid = create_project(&app, &token, "阶段排序").await;
+    let (rid, _) = create_roadmap(&app, &token, &pid).await;
+
+    let first = create_stage(&app, &token, &pid, &rid, "基础").await;
+    let second = create_stage(&app, &token, &pid, &rid, "强化").await;
+
+    for (stage_id, expected) in [(&first, 1), (&second, 2)] {
+        let (_, envelope) = send_json::<Value>(
+            &app,
+            Method::GET,
+            &format!("/api/v1/projects/{pid}/roadmaps/{rid}/stages/{stage_id}"),
+            Some(&token),
+            None,
+        )
+        .await;
+        assert_eq!(
+            envelope.data.unwrap()["sequence_no"].as_i64().unwrap(),
+            expected,
+            "省略顺序号应追加到末尾"
+        );
+    }
+
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::POST,
+        &format!("/api/v1/projects/{pid}/roadmaps/{rid}/stages"),
+        Some(&token),
+        Some(json!({ "name": "冲突阶段", "sequence_no": 2 })),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "显式顺序号重复应直接 422"
+    );
+
+    let (status, _) = send_json::<Value>(
+        &app,
+        Method::PATCH,
+        &format!("/api/v1/projects/{pid}/roadmaps/{rid}/stages/{second}"),
+        Some(&token),
+        Some(json!({ "sequence_no": 1 })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
 }

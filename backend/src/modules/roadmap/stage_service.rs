@@ -152,13 +152,16 @@ pub async fn create(
             .await
         {
             Ok(row) => return StageItem::try_from(row),
-            Err(err) => {
-                if is_unique_violation(&err) {
-                    last_error = Some(err);
-                    continue;
+            Err(err) if is_unique_violation(&err) => {
+                // 显式指定顺序号时值不会变，重试只会再撞一次
+                if payload.sequence_no.is_some() {
+                    return Err(AppError::Validation(
+                        "sequence_no 在同一路线内必须唯一".to_string(),
+                    ));
                 }
-                return Err(AppError::Internal(format!("insert stage: {err}")));
+                last_error = Some(err);
             }
+            Err(err) => return Err(AppError::Internal(format!("insert stage: {err}"))),
         }
     }
 

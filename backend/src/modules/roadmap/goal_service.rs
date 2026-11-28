@@ -172,6 +172,24 @@ async fn ensure_parent(pool: &PgPool, project_id: Uuid, parent_id: Uuid) -> AppR
     Ok(())
 }
 
+/// 降为子目标前的守卫：自身有子目标时不允许降级，否则会出现第三层（D-06）
+async fn ensure_no_children(pool: &PgPool, goal_id: Uuid) -> AppResult<()> {
+    let children = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM project_goals WHERE parent_goal_id = $1",
+    )
+    .bind(goal_id)
+    .fetch_one(pool)
+    .await?;
+
+    if children > 0 {
+        return Err(AppError::Validation(
+            "该目标下已有子目标，不能再降为子目标（层级上限两层）".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
 /// 「每项目最多一个主目标」校验；`exclude` 用于更新场景排除自身
 async fn ensure_single_primary(
     pool: &PgPool,
@@ -266,6 +284,7 @@ pub async fn update(
                     return Err(AppError::Validation("目标不能以自身为父目标".to_string()));
                 }
                 ensure_parent(pool, project_id, parent_id).await?;
+                ensure_no_children(pool, goal_id).await?;
             }
             None => {
                 // 提升为主目标：须保证项目内没有第二个主目标
