@@ -3,9 +3,10 @@ import {computed, onMounted, ref} from "vue";
 import {RouterLink} from "vue-router";
 import {describeError} from "../api/http";
 import {fetchProjects, type ProjectItem} from "../api/projects";
-import {fetchRecords, type RecordItem} from "../api/records";
+import {fetchSessions, type SessionItem} from "../api/sessions";
 import {useAuthStore} from "../stores/auth";
 import {daysUntil, PROJECT_STATUS_LABELS, PROJECT_TYPE_LABELS} from "./projects/project-rules";
+import {ACTIVITY_TYPE_LABELS, formatMinutes, formatTimeRange} from "./sessions/session-rules";
 
 interface StatCard {
   label: string;
@@ -20,8 +21,8 @@ interface StatCard {
 const authStore = useAuthStore();
 
 const projects = ref<ProjectItem[]>([]);
-const records = ref<RecordItem[]>([]);
-const recordTotal = ref(0);
+const sessions = ref<SessionItem[]>([]);
+const sessionTotal = ref(0);
 const loading = ref(true);
 const error = ref("");
 
@@ -112,10 +113,10 @@ const stats = computed<StatCard[]>(() => {
       paths: ["m20 6-11 11-5-5"],
     },
     {
-      label: "学习记录",
-      value: String(recordTotal.value),
-      unit: "条",
-      caption: recordTotal.value > 0 ? "累计沉淀的学习记录" : "还没有记录，写下第一条吧",
+      label: "学习活动",
+      value: String(sessionTotal.value),
+      unit: "次",
+      caption: sessionTotal.value > 0 ? "累计记录的学习活动" : "还没有活动，写下第一次吧",
       ratio: null,
       tone: "violet",
       paths: ["M4 19.5A2.5 2.5 0 0 1 6.5 17H20", "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"],
@@ -170,16 +171,11 @@ function isOverdue(project: ProjectItem): boolean {
   return days !== null && days < 0;
 }
 
-function recordTime(iso: string): string {
-  const date = new Date(iso);
+/** 标题可空（记录时允许只填时间与类型），空则退回活动类型名 */
+function sessionTitle(session: SessionItem): string {
+  const title = session.title?.trim();
 
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  const pad = (value: number) => String(value).padStart(2, "0");
-
-  return `${date.getMonth() + 1} 月 ${date.getDate()} 日 ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return title && title.length > 0 ? title : ACTIVITY_TYPE_LABELS[session.activity_type];
 }
 
 async function load(): Promise<void> {
@@ -187,14 +183,14 @@ async function load(): Promise<void> {
   error.value = "";
 
   try {
-    const [projectData, recordData] = await Promise.all([
+    const [projectData, sessionData] = await Promise.all([
       fetchProjects({page: 1, page_size: 100, include_archived: true}),
-      fetchRecords(1, 5),
+      fetchSessions({page: 1, page_size: 5}),
     ]);
 
     projects.value = projectData.items;
-    records.value = recordData.items;
-    recordTotal.value = recordData.total;
+    sessions.value = sessionData.items;
+    sessionTotal.value = sessionData.total;
   } catch (e: unknown) {
     error.value = describeError(e);
   } finally {
@@ -312,31 +308,31 @@ onMounted(() => {
             <h2>近期学习</h2>
           </div>
 
-          <RouterLink class="panel-link" to="/records">全部 →</RouterLink>
+          <RouterLink class="panel-link" to="/sessions">全部 →</RouterLink>
         </header>
 
         <div v-if="loading" class="skeleton-list">
           <span v-for="index in 3" :key="index" class="skeleton-row"/>
         </div>
 
-        <ul v-else-if="records.length > 0" class="record-list">
-          <li v-for="record in records" :key="record.id" class="record-row">
-            <span aria-hidden="true" class="record-dot"/>
+        <ul v-else-if="sessions.length > 0" class="session-list">
+          <li v-for="session in sessions" :key="session.id" class="session-row">
+            <span aria-hidden="true" class="session-dot"/>
 
-            <div class="record-body">
-              <p class="record-title">{{ record.title }}</p>
-              <p class="record-meta">
-                <span v-if="record.subject" class="row-chip">{{ record.subject }}</span>
-                <span v-if="record.duration_minutes">{{ record.duration_minutes }} 分钟</span>
-                <span>{{ recordTime(record.created_at) }}</span>
+            <div class="session-body">
+              <p class="session-title">{{ sessionTitle(session) }}</p>
+              <p class="session-meta">
+                <span class="row-chip">{{ ACTIVITY_TYPE_LABELS[session.activity_type] }}</span>
+                <span>{{ formatMinutes(session.duration_minutes) }}</span>
+                <span>{{ formatTimeRange(session.started_at, session.ended_at) }}</span>
               </p>
             </div>
           </li>
         </ul>
 
         <div v-else-if="!loading" class="panel-empty">
-          <p>还没有学习记录。</p>
-          <RouterLink class="empty-btn" to="/records">写一条记录</RouterLink>
+          <p>还没有学习活动。</p>
+          <RouterLink class="empty-btn" to="/sessions">记一次活动</RouterLink>
         </div>
       </section>
     </div>
@@ -637,7 +633,7 @@ onMounted(() => {
 ============================== */
 
 .project-list,
-.record-list {
+.session-list {
   padding: 0;
   margin: 0;
   list-style: none;
@@ -725,21 +721,21 @@ onMounted(() => {
 }
 
 /* ==============================
-   记录列表
+   活动列表
 ============================== */
 
-.record-row {
+.session-row {
   display: flex;
   gap: 10px;
 
   padding: 11px 0;
 }
 
-.record-row + .record-row {
+.session-row + .session-row {
   border-top: 1px solid var(--line);
 }
 
-.record-dot {
+.session-dot {
   flex-shrink: 0;
 
   width: 7px;
@@ -752,11 +748,11 @@ onMounted(() => {
   box-shadow: 0 0 0 3px var(--green-soft);
 }
 
-.record-body {
+.session-body {
   min-width: 0;
 }
 
-.record-title {
+.session-title {
   overflow: hidden;
 
   margin: 0;
@@ -768,7 +764,7 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.record-meta {
+.session-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

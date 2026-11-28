@@ -29,12 +29,9 @@ const navItems: { to: string; label: string; paths: string[] }[] = [
     paths: ["m9 4 6 2 6-2v12l-6 2-6-2-6 2V6Z", "M9 4v12M15 6v12"],
   },
   {
-    to: "/records",
-    label: "学习记录",
-    paths: [
-      "M4 19.5A2.5 2.5 0 0 1 6.5 17H20",
-      "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z",
-    ],
+    to: "/sessions",
+    label: "学习活动",
+    paths: ["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z", "M12 7.5V12l3 2"],
   },
   {
     to: "/plans",

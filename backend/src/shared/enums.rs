@@ -242,3 +242,47 @@ string_enum! {
         Waived => "waived",
     }
 }
+
+string_enum! {
+    /// 一次学习活动「干了什么」（ERD §5.3）；与项目类型（长期方向）不是一回事。
+    ///
+    /// `review` 只表示这次主要在复习，不代表已进入 M07 复习队列。
+    ActivityType {
+        Theory => "theory",
+        Practice => "practice",
+        Review => "review",
+        Mixed => "mixed",
+        Other => "other",
+    }
+}
+
+string_enum! {
+    /// 学习活动的创建来源（ADR-010 §2）。
+    ///
+    /// `Imported` 只允许迁移脚本写入，API 提交即 422；`Timer` 是客户端自报，不是安全边界。
+    SessionSource {
+        User => "user",
+        Timer => "timer",
+        Imported => "imported",
+    }
+}
+
+string_enum! {
+    /// 活动对内容的贡献方式（ERD SessionContent）
+    SessionContribution {
+        Primary => "primary",
+        Covered => "covered",
+        Practiced => "practiced",
+    }
+}
+
+string_enum! {
+    /// 学习证据类型；v1 只开三类文本 / 链接证据（ADR-010 §4）。
+    ///
+    /// `code` / `image` / `file` 需要对象存储，延后开放——DB CHECK 与枚举同步只认这三值。
+    EvidenceType {
+        Note => "note",
+        Link => "link",
+        TestResult => "test_result",
+    }
+}

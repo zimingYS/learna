@@ -812,6 +812,10 @@ primary；可使用部分唯一索引。 - 若 session 的 primary_project_id
 项目。这样避免双重事实。本文 ERD 中的 primary 语义以
 `LearningSession.primary_project_id` 为准。
 
+**v1 已按推荐方案落地**：`relation_role` 列保留但加 `CHECK (relation_role = 'related')`，
+即 DB 层面不可能出现 primary 行；主要项目只由 `learning_sessions.primary_project_id`
+表达，`PUT /learning-sessions/{id}/projects` 传主要项目直接 422。
+
 #### SessionContent
 
   字段                类型建议      约束/说明
@@ -836,24 +840,30 @@ primary；可使用部分唯一索引。 - 若 session 的 primary_project_id
   session_id              UUID                    FK -\>
                                                   LearningSession，可空
 
-  evidence_type           VARCHAR(30)             note / code / image /
-                                                  file / link /
-                                                  test_result
+  evidence_type           VARCHAR(30)             v1 只落 note / link /
+                                                  test_result；code /
+                                                  image / file 延后
+                                                  （ADR-010 §4）
 
   title                   VARCHAR(200)            NULL
 
-  description             TEXT                    NULL
+  description             TEXT                    NULL；note /
+                                                  test_result 必填
 
-  storage_key             TEXT                    文件存储对象键，可空
-
-  external_url            TEXT                    外部链接，可空
-
-  mime_type               VARCHAR(120)            NULL
-
-  size_bytes              BIGINT                  CHECK \>= 0
+  external_url            TEXT                    外部链接；link 必填
 
   created_at              TIMESTAMPTZ             NOT NULL
   -----------------------------------------------------------------------
+
+**v1 实现口径（ADR-010 §4）**：`storage_key` / `mime_type` / `size_bytes`
+三列**不建**——`LocalStorage` 仍是 stub，没有生产者，建了只会让契约兑现不了。
+`evidence_type` 的 CHECK 只放行 `note` / `link` / `test_result`；同时加一条
+`ck_learning_evidence_payload`，按类型兜底必填字段（服务层先校验并给可读
+message，DB CHECK 是最后一道）。
+
+当文件类证据真正落地时（等 `infrastructure/storage` + 统一附件登记表），
+再补这三列并扩大 `evidence_type` 的白名单——那是一次新的 migration，
+不在 v1 里预留空列。
 
 附件二进制内容存储在对象存储或文件服务中，数据库保存元数据与存储键。原图保留策略、压缩版本和访问授权由文件服务定义。
 
@@ -2112,7 +2122,7 @@ service。
 10. **并发与审计**：关键状态迁移的乐观锁、幂等键、审计事件和事务边界。
 11. **「有效学习日」判定算法**：PRD §5.4 要求结合活动内容评估并允许用户纠正，V1.2 只落了规则表（§5.6 `ProjectCommitmentRule`），未定义判定口径与阈值。
 12. **审计事件表**：`ProjectEvent` 是业务可追溯（随项目级联删除），审计事件仍无表。设计审计表时**不得**有指向业务表的外键（§5.6 已说明原因）。
-13. **统一附件登记表**：`LearningEvidence` / `QuestionAsset` / `ArtifactAsset` 三处各自持 `storage_key`，是否收敛为一张 `stored_assets`（含引用计数与清理策略）待定。
+13. **统一附件登记表**：`LearningEvidence` 在 v1 **不建** `storage_key` 系列列（ADR-010 §4，三类文本/链接证据），因此当前只有 `QuestionAsset` / `ArtifactAsset` 两处持 `storage_key`；是否收敛为一张 `stored_assets`（含引用计数与清理策略）待定。
 14. **成果是否允许无项目归属**：V1.2 定为 `project_id NOT NULL`；若要支持「个人成果档案」，需改为可空并引入归属枚举，属模型变更而非补列。
 15. **生活记录的其他身体指标**：PRD 只列「体重等」，体脂率、围度、睡眠质量等未列举，暂不加列。
 16. ~~**学习内容的正文存储形态**~~ **已定（ADR-009）**：新增 `body TEXT` + `body_format`（`markdown` / `plain_text`）+ `source_url`；正文入库而**不进对象存储**（正文是业务事实，需要事务与检索），附件整体归 M09 成果 / M05 证据，内容域不带附件；`metadata` 在 v1 不读写、恒 `NULL`。
