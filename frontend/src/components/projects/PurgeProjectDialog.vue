@@ -124,10 +124,10 @@ async function handleSubmit(): Promise<void> {
 .purge-warning {
   padding: 14px 16px;
 
-  border: 1px solid #f6d5d5;
+  border: 1px solid #f7dada;
   border-radius: 10px;
 
-  background: #fff8f8;
+  background: var(--rose-soft);
   color: #8d4040;
 
   font-size: 13px;
@@ -150,7 +150,7 @@ async function handleSubmit(): Promise<void> {
   border-radius: 4px;
   background: #f0f2f8;
 
-  color: #364152;
+  color: var(--ink-2);
   font-family: inherit;
   font-size: 12px;
 }

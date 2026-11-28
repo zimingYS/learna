@@ -208,14 +208,14 @@ async function remove(): Promise<void> {
 
 .panel-title {
   margin: 0;
-  color: #202b40;
+  color: var(--ink-1);
   font-size: 17px;
   font-weight: 650;
 }
 
 .panel-sub {
   margin: 6px 0 0;
-  color: #8490a3;
+  color: var(--ink-3);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -229,9 +229,9 @@ async function remove(): Promise<void> {
   padding: 0 15px;
 
   border: none;
-  border-radius: 9px;
+  border-radius: var(--radius-pill);
 
-  background: #4f46e5;
+  background: var(--brand);
   color: #fff;
 
   font-size: 13px;
@@ -242,7 +242,7 @@ async function remove(): Promise<void> {
 }
 
 .create-btn:hover {
-  background: #4338ca;
+  background: var(--brand-strong);
 }
 
 .plus {
@@ -252,7 +252,7 @@ async function remove(): Promise<void> {
 
 .hint {
   margin: 0;
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 13px;
 }
 
@@ -260,10 +260,10 @@ async function remove(): Promise<void> {
   padding: 34px 20px;
   margin: 0;
 
-  border: 1px dashed #dfe4ee;
-  border-radius: 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
 
-  color: #8a94a6;
+  color: var(--ink-3);
   font-size: 13px;
   text-align: center;
 }
@@ -287,8 +287,8 @@ async function remove(): Promise<void> {
 
   padding: 13px 16px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
 
   background: #fff;
 
@@ -301,7 +301,7 @@ async function remove(): Promise<void> {
 }
 
 .roadmap-item--muted {
-  background: #fbfcfe;
+  background: var(--surface-muted);
 }
 
 .roadmap-main {
@@ -327,8 +327,8 @@ async function remove(): Promise<void> {
 
   border-radius: 6px;
 
-  background: #f2f4f9;
-  color: #4a5568;
+  background: var(--surface-muted);
+  color: var(--ink-2);
 
   font-size: 12px;
   font-weight: 700;
@@ -349,14 +349,14 @@ async function remove(): Promise<void> {
 }
 
 .source {
-  color: #8490a3;
+  color: var(--ink-3);
   font-size: 12px;
 }
 
 .summary {
   overflow: hidden;
 
-  color: #364152;
+  color: var(--ink-2);
   font-size: 13px;
   line-height: 1.6;
   text-overflow: ellipsis;
@@ -364,7 +364,7 @@ async function remove(): Promise<void> {
 }
 
 .time {
-  color: #a0a9b7;
+  color: var(--ink-4);
   font-size: 12px;
 }
 
@@ -378,11 +378,11 @@ async function remove(): Promise<void> {
 .ghost-btn {
   padding: 6px 11px;
 
-  border: 1px solid #dce2eb;
-  border-radius: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
 
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 
   font-size: 12px;
   cursor: pointer;
@@ -391,14 +391,14 @@ async function remove(): Promise<void> {
 }
 
 .ghost-btn:hover {
-  border-color: #c5ccda;
-  background: #f8f9fc;
+  border-color: var(--line-strong);
+  background: var(--surface-muted);
 }
 
 .ghost-btn--primary {
   border-color: #cfd4fb;
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
   font-weight: 600;
 }
 
@@ -407,17 +407,17 @@ async function remove(): Promise<void> {
 }
 
 .ghost-btn--danger {
-  border-color: #f0dada;
-  color: #c04141;
+  border-color: #f7dada;
+  color: #bf3a40;
 }
 
 .ghost-btn--danger:hover {
   border-color: #e8c3c3;
-  background: #fff6f6;
+  background: var(--rose-soft);
 }
 
 .readonly-tag {
-  color: #a0a9b7;
+  color: var(--ink-4);
   font-size: 12px;
 }
 
@@ -430,16 +430,16 @@ async function remove(): Promise<void> {
 
   padding-top: 16px;
 
-  border-top: 1px solid #eceff5;
+  border-top: 1px solid var(--line);
 }
 
 .pagination-info {
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 12px;
 }
 
 .pagination-info strong {
-  color: #4a5568;
+  color: var(--ink-2);
 }
 
 .pagination {
@@ -451,19 +451,19 @@ async function remove(): Promise<void> {
   min-height: 32px;
   padding: 0 12px;
 
-  border: 1px solid #dce2eb;
-  border-radius: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
 
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 
   font-size: 12px;
   cursor: pointer;
 }
 
 .page-btn:hover:not(:disabled) {
-  border-color: #c5ccda;
-  background: #f8f9fc;
+  border-color: var(--line-strong);
+  background: var(--surface-muted);
 }
 
 .page-btn:disabled {
@@ -473,7 +473,7 @@ async function remove(): Promise<void> {
 
 .confirm-text {
   margin: 0;
-  color: #364152;
+  color: var(--ink-2);
   font-size: 14px;
   line-height: 1.7;
 }

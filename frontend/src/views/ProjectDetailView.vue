@@ -218,9 +218,7 @@ onMounted(() => {
 <style scoped>
 .detail-page {
   min-height: 100%;
-  padding: 32px 28px 48px;
-  background: #f5f7fb;
-  color: #263248;
+  color: var(--ink-1);
 }
 
 .detail-container {
@@ -236,36 +234,36 @@ onMounted(() => {
 
   margin-bottom: 18px;
 
-  color: #7d8798;
+  color: var(--ink-3);
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
 }
 
 .back-link:hover {
-  color: #4f46e5;
+  color: var(--brand);
 }
 
 .back-link:focus-visible {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid var(--brand);
   outline-offset: 3px;
 }
 
 .state-block {
   padding: 28px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
 
   background: #fff;
-  color: #7d8798;
+  color: var(--ink-3);
   font-size: 14px;
 }
 
 .state-block--error {
-  border-color: #f6d5d5;
-  background: #fff8f8;
-  color: #c04141;
+  border-color: #f7dada;
+  background: var(--rose-soft);
+  color: #bf3a40;
 }
 
 .state-block p {
@@ -295,8 +293,8 @@ onMounted(() => {
 
   border-radius: 13px;
 
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 .type-icon svg {
@@ -319,7 +317,7 @@ onMounted(() => {
 .name-row h1 {
   margin: 0;
 
-  color: #202b40;
+  color: var(--ink-1);
   font-size: 25px;
   font-weight: 700;
   letter-spacing: -0.4px;
@@ -328,7 +326,7 @@ onMounted(() => {
 
 .subtitle {
   margin: 7px 0 0;
-  color: #7d8798;
+  color: var(--ink-3);
   font-size: 13px;
 }
 
@@ -348,7 +346,7 @@ onMounted(() => {
   min-height: 38px;
   padding: 0 16px;
 
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
 
   font-size: 13px;
   font-weight: 600;
@@ -358,28 +356,28 @@ onMounted(() => {
 }
 
 .ghost-btn {
-  border: 1px solid #dce2eb;
+  border: 1px solid var(--line-strong);
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 }
 
 .ghost-btn:hover {
-  background: #f8f9fc;
+  background: var(--surface-muted);
 }
 
 .primary-btn {
   border: 1px solid transparent;
-  background: #4f46e5;
+  background: var(--brand);
   color: #fff;
 }
 
 .primary-btn:hover {
-  background: #4338ca;
+  background: var(--brand-strong);
 }
 
 .ghost-btn:focus-visible,
 .primary-btn:focus-visible {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
@@ -402,11 +400,11 @@ onMounted(() => {
   padding: 10px 14px;
   margin: 0 0 16px;
 
-  border: 1px solid #f6d5d5;
+  border: 1px solid #f7dada;
   border-radius: 10px;
 
-  background: #fff6f6;
-  color: #c04141;
+  background: var(--rose-soft);
+  color: #bf3a40;
 
   font-size: 13px;
 }

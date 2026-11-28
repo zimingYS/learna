@@ -123,9 +123,7 @@ onMounted(() => {
 <style scoped>
 .projects-page {
   min-height: 100%;
-  padding: 40px 28px 48px;
-  background: #f5f7fb;
-  color: #263248;
+  color: var(--ink-1);
 }
 
 .projects-container {
@@ -147,16 +145,16 @@ onMounted(() => {
 
 .page-header h1 {
   margin: 0;
-  color: #202b40;
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  color: var(--ink-1);
+  font-size: 27px;
+  font-weight: 720;
+  letter-spacing: -0.7px;
 }
 
 .page-header p {
-  margin: 9px 0 0;
-  color: #8490a3;
-  font-size: 14px;
+  margin: 8px 0 0;
+  color: var(--ink-3);
+  font-size: 13.5px;
   line-height: 1.6;
 }
 
@@ -169,10 +167,10 @@ onMounted(() => {
   padding: 0 18px;
 
   border: none;
-  border-radius: 9px;
+  border-radius: var(--radius-pill);
 
-  background: #4f46e5;
-  box-shadow: 0 3px 10px rgb(79 70 229 / 22%);
+  background: var(--brand);
+  box-shadow: 0 10px 22px -12px rgb(79 70 229 / 80%);
   color: #fff;
 
   font-size: 14px;
@@ -183,7 +181,7 @@ onMounted(() => {
 }
 
 .create-btn:hover {
-  background: #4338ca;
+  background: var(--brand-strong);
   transform: translateY(-1px);
 }
 
@@ -191,7 +189,7 @@ onMounted(() => {
 .tab:focus-visible,
 .page-btn:focus-visible,
 .ghost-btn:focus-visible {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
@@ -210,13 +208,14 @@ onMounted(() => {
   justify-content: space-between;
   gap: 14px;
 
-  padding: 8px 12px;
+  padding: 7px 10px;
   margin-bottom: 20px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
 
-  background: #fff;
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
 }
 
 .status-tabs {
@@ -229,10 +228,10 @@ onMounted(() => {
   padding: 7px 14px;
 
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
 
   background: transparent;
-  color: #6b7488;
+  color: var(--ink-3);
 
   font-size: 13px;
   font-weight: 500;
@@ -242,13 +241,13 @@ onMounted(() => {
 }
 
 .tab:hover {
-  background: #f4f6fc;
-  color: #4f46e5;
+  background: var(--surface-muted);
+  color: var(--brand);
 }
 
 .tab--active {
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
   font-weight: 600;
 }
 
@@ -259,7 +258,7 @@ onMounted(() => {
 
   padding-right: 6px;
 
-  color: #7d8798;
+  color: var(--ink-3);
   font-size: 13px;
   cursor: pointer;
   user-select: none;
@@ -268,7 +267,7 @@ onMounted(() => {
 .archive-toggle input {
   width: 15px;
   height: 15px;
-  accent-color: #4f46e5;
+  accent-color: var(--brand);
   cursor: pointer;
 }
 
@@ -282,11 +281,11 @@ onMounted(() => {
   padding: 11px 14px;
   margin: 0 0 18px;
 
-  border: 1px solid #f6d5d5;
-  border-radius: 10px;
+  border: 1px solid #f7dada;
+  border-radius: var(--radius-sm);
 
-  background: #fff6f6;
-  color: #c04141;
+  background: var(--rose-soft);
+  color: #bf3a40;
 
   font-size: 13px;
 }
@@ -302,7 +301,7 @@ onMounted(() => {
 
   border-radius: 50%;
 
-  background: #e05252;
+  background: var(--rose);
   color: #fff;
 
   font-size: 11px;
@@ -311,12 +310,12 @@ onMounted(() => {
 
 .result-summary {
   margin: 0 0 14px;
-  color: #98a1b2;
-  font-size: 13px;
+  color: var(--ink-3);
+  font-size: 12.5px;
 }
 
 .result-summary strong {
-  color: #4f46e5;
+  color: var(--brand);
 }
 
 /* ==================== 卡片网格 ==================== */
@@ -324,7 +323,7 @@ onMounted(() => {
 .project-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
 }
 
 /* ==================== 分页 ==================== */
@@ -339,16 +338,16 @@ onMounted(() => {
   padding-top: 22px;
   margin-top: 24px;
 
-  border-top: 1px solid #eceff5;
+  border-top: 1px solid var(--line);
 }
 
 .pagination-info {
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 13px;
 }
 
 .pagination-info strong {
-  color: #4a5568;
+  color: var(--ink-2);
 }
 
 .pagination {
@@ -363,11 +362,11 @@ onMounted(() => {
   gap: 5px;
   padding: 0 14px;
 
-  border: 1px solid #dce2eb;
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
 
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 
   font-size: 13px;
   cursor: pointer;
@@ -376,8 +375,8 @@ onMounted(() => {
 }
 
 .page-btn:hover:not(:disabled) {
-  border-color: #c5ccda;
-  background: #f8f9fc;
+  border-color: var(--line-strong);
+  background: var(--surface-muted);
 }
 
 .page-btn:disabled {

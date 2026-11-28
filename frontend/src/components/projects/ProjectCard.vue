@@ -99,11 +99,11 @@ const isOverdue = computed(() => {
 
   padding: 20px 20px 16px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
 
   background: #fff;
-  box-shadow: 0 2px 10px rgb(31 45 72 / 4%);
+  box-shadow: var(--shadow-sm);
 
   color: inherit;
   text-decoration: none;
@@ -118,12 +118,12 @@ const isOverdue = computed(() => {
 }
 
 .project-card:focus-visible {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid var(--brand);
   outline-offset: 3px;
 }
 
 .project-card--archived {
-  background: #fbfcfe;
+  background: var(--surface-muted);
 }
 
 .card-head {
@@ -143,8 +143,8 @@ const isOverdue = computed(() => {
 
   border-radius: 11px;
 
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 .type-icon svg {
@@ -162,7 +162,7 @@ const isOverdue = computed(() => {
 
   margin: 0;
 
-  color: #202b40;
+  color: var(--ink-1);
   font-size: 16px;
   font-weight: 650;
   letter-spacing: -0.2px;
@@ -172,7 +172,7 @@ const isOverdue = computed(() => {
 
 .project-type {
   margin: 4px 0 0;
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 12px;
 }
 
@@ -184,13 +184,13 @@ const isOverdue = computed(() => {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 
-  color: #66718a;
+  color: var(--ink-3);
   font-size: 13px;
   line-height: 1.65;
 }
 
 .project-desc--empty {
-  color: #b0b8c6;
+  color: var(--ink-4);
 }
 
 .card-meta {
@@ -201,7 +201,7 @@ const isOverdue = computed(() => {
   padding: 12px 0 0;
   margin: 0;
 
-  border-top: 1px dashed #eef1f7;
+  border-top: 1px dashed var(--line);
 }
 
 .meta-item {
@@ -213,7 +213,7 @@ const isOverdue = computed(() => {
 }
 
 .meta-item dt {
-  color: #98a1b2;
+  color: var(--ink-3);
 }
 
 .meta-item dd {
@@ -222,7 +222,7 @@ const isOverdue = computed(() => {
   gap: 6px;
   margin: 0;
 
-  color: #4a5568;
+  color: var(--ink-2);
   font-weight: 600;
 }
 
@@ -231,20 +231,20 @@ const isOverdue = computed(() => {
 
   border-radius: 5px;
 
-  background: #f3f0ff;
-  color: #6b46c1;
+  background: var(--violet-soft);
+  color: #6d4bd8;
 
   font-size: 11px;
   font-weight: 700;
 }
 
 .meta-date {
-  color: #9aa3b2;
+  color: var(--ink-4);
   font-weight: 400;
 }
 
 .meta-overdue {
-  color: #d64545 !important;
+  color: var(--rose) !important;
 }
 
 .card-foot {
@@ -255,7 +255,7 @@ const isOverdue = computed(() => {
 }
 
 .updated-at {
-  color: #a6aebc;
+  color: var(--ink-4);
   font-size: 12px;
 }
 
@@ -264,7 +264,7 @@ const isOverdue = computed(() => {
   align-items: center;
   gap: 4px;
 
-  color: #4f46e5;
+  color: var(--brand);
   font-size: 12px;
   font-weight: 600;
 }

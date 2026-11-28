@@ -93,17 +93,17 @@ const deadlineText = computed(() => {
 .card {
   padding: 22px 24px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
 
   background: #fff;
-  box-shadow: 0 2px 10px rgb(31 45 72 / 4%);
+  box-shadow: var(--shadow-sm);
 }
 
 .card h2 {
   margin: 0 0 14px;
 
-  color: #263248;
+  color: var(--ink-1);
   font-size: 16px;
   font-weight: 650;
 }
@@ -115,7 +115,7 @@ const deadlineText = computed(() => {
   border-radius: 10px;
 
   background: #f8f9fd;
-  color: #4a5568;
+  color: var(--ink-2);
 
   font-size: 13.5px;
   line-height: 1.8;
@@ -123,7 +123,7 @@ const deadlineText = computed(() => {
 }
 
 .description--empty {
-  color: #a6aebc;
+  color: var(--ink-4);
 }
 
 .info-grid {
@@ -134,14 +134,14 @@ const deadlineText = computed(() => {
 }
 
 .info-item dt {
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 12px;
 }
 
 .info-item dd {
   margin: 5px 0 0;
 
-  color: #364152;
+  color: var(--ink-2);
   font-size: 13.5px;
   font-weight: 600;
 }
@@ -153,8 +153,8 @@ const deadlineText = computed(() => {
 
   border-radius: 5px;
 
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
 
   font-size: 11px;
   font-weight: 600;

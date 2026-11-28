@@ -156,6 +156,6 @@ async function handleSubmit(): Promise<void> {
 }
 
 .deadline-current strong {
-  color: #263248;
+  color: var(--ink-1);
 }
 </style>

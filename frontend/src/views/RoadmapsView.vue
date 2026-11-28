@@ -180,9 +180,7 @@ function onProjectChange(event: Event): void {
 <style scoped>
 .planning-page {
   min-height: 100%;
-  padding: 40px 28px 48px;
-  background: #f5f7fb;
-  color: #263248;
+  color: var(--ink-1);
 }
 
 .planning-container {
@@ -203,7 +201,7 @@ function onProjectChange(event: Event): void {
 
 .page-header h1 {
   margin: 0;
-  color: #202b40;
+  color: var(--ink-1);
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.5px;
@@ -211,7 +209,7 @@ function onProjectChange(event: Event): void {
 
 .page-header p {
   margin: 9px 0 0;
-  color: #8490a3;
+  color: var(--ink-3);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -223,40 +221,40 @@ function onProjectChange(event: Event): void {
 }
 
 .picker-label {
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 12px;
 }
 
 .picker-select {
   min-width: 240px;
   height: 40px;
-  padding: 0 12px;
+  padding: 0 14px;
 
-  border: 1px solid #dce2eb;
-  border-radius: 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
 
   background: #fff;
-  color: #263248;
+  color: var(--ink-1);
 
   font-family: inherit;
   font-size: 14px;
 }
 
 .picker-select:focus {
-  border-color: #8b93f8;
+  border-color: var(--brand);
   outline: none;
-  box-shadow: 0 0 0 3px rgb(79 70 229 / 12%);
+  box-shadow: 0 0 0 3px var(--brand-ring);
 }
 
 .error-banner {
   padding: 11px 14px;
   margin: 0 0 16px;
 
-  border: 1px solid #f6d5d5;
+  border: 1px solid #f7dada;
   border-radius: 10px;
 
-  background: #fff6f6;
-  color: #c04141;
+  background: var(--rose-soft);
+  color: #bf3a40;
 
   font-size: 13px;
 }
@@ -269,20 +267,21 @@ function onProjectChange(event: Event): void {
   padding: 6px;
   margin-bottom: 18px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
 
-  background: #fff;
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
 }
 
 .planning-tab {
   padding: 8px 16px;
 
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
 
   background: transparent;
-  color: #6b7488;
+  color: var(--ink-3);
 
   font-size: 13px;
   font-weight: 500;
@@ -292,13 +291,13 @@ function onProjectChange(event: Event): void {
 }
 
 .planning-tab:hover {
-  background: #f4f6fc;
-  color: #4f46e5;
+  background: var(--surface-muted);
+  color: var(--brand);
 }
 
 .planning-tab--active {
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
   font-weight: 600;
 }
 
@@ -306,11 +305,11 @@ function onProjectChange(event: Event): void {
   padding: 60px 24px;
   margin: 0;
 
-  border: 1px dashed #dfe4ee;
-  border-radius: 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
 
   background: #fff;
-  color: #8a94a6;
+  color: var(--ink-3);
 
   font-size: 14px;
   line-height: 1.8;
@@ -326,8 +325,8 @@ function onProjectChange(event: Event): void {
 .card-block {
   padding: 22px 24px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
 
   background: #fff;
 }
@@ -341,7 +340,7 @@ function onProjectChange(event: Event): void {
 
 .footnote {
   margin: 22px 0 0;
-  color: #a0a9b7;
+  color: var(--ink-4);
   font-size: 12px;
   text-align: center;
 }

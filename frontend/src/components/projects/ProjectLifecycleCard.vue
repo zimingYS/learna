@@ -60,24 +60,24 @@ const actions = computed(() => availableActions(props.project.status));
 .card {
   padding: 22px 24px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
 
   background: #fff;
-  box-shadow: 0 2px 10px rgb(31 45 72 / 4%);
+  box-shadow: var(--shadow-sm);
 }
 
 .card h2 {
   margin: 0 0 14px;
 
-  color: #263248;
+  color: var(--ink-1);
   font-size: 16px;
   font-weight: 650;
 }
 
 .card-hint {
   margin: 0 0 14px;
-  color: #8490a3;
+  color: var(--ink-3);
   font-size: 12.5px;
   line-height: 1.7;
 }
@@ -92,7 +92,7 @@ const actions = computed(() => availableActions(props.project.status));
   min-height: 40px;
   padding: 0 16px;
 
-  border-radius: 9px;
+  border-radius: var(--radius-pill);
 
   font-size: 13.5px;
   font-weight: 600;
@@ -108,27 +108,27 @@ const actions = computed(() => availableActions(props.project.status));
 
 .action-btn--primary {
   border: 1px solid transparent;
-  background: #4f46e5;
+  background: var(--brand);
   color: #fff;
 }
 
 .action-btn--primary:hover:not(:disabled) {
-  background: #4338ca;
+  background: var(--brand-strong);
 }
 
 .action-btn--ghost {
-  border: 1px solid #dce2eb;
+  border: 1px solid var(--line-strong);
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 }
 
 .action-btn--ghost:hover:not(:disabled) {
-  background: #f8f9fc;
+  background: var(--surface-muted);
 }
 
 .action-btn:focus-visible,
 .danger-link:focus-visible {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 

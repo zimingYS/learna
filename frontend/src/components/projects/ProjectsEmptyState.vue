@@ -62,8 +62,8 @@ const emit = defineEmits<{
 
   border-radius: 16px;
 
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 .empty-icon svg {
@@ -74,7 +74,7 @@ const emit = defineEmits<{
 .empty-state h2 {
   margin: 0;
 
-  color: #263248;
+  color: var(--ink-1);
   font-size: 17px;
   font-weight: 650;
 }
@@ -83,7 +83,7 @@ const emit = defineEmits<{
   max-width: 420px;
   margin: 8px 0 20px;
 
-  color: #8490a3;
+  color: var(--ink-3);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -98,7 +98,7 @@ const emit = defineEmits<{
   border: none;
   border-radius: 9px;
 
-  background: #4f46e5;
+  background: var(--brand);
   box-shadow: 0 3px 10px rgb(79 70 229 / 22%);
   color: #fff;
 
@@ -108,7 +108,7 @@ const emit = defineEmits<{
 }
 
 .create-btn:hover {
-  background: #4338ca;
+  background: var(--brand-strong);
 }
 
 .plus-icon {
@@ -121,11 +121,11 @@ const emit = defineEmits<{
   min-height: 38px;
   padding: 0 16px;
 
-  border: 1px solid #dce2eb;
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
 
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 
   font-size: 13px;
   font-weight: 600;
@@ -133,12 +133,12 @@ const emit = defineEmits<{
 }
 
 .ghost-btn:hover {
-  background: #f8f9fc;
+  background: var(--surface-muted);
 }
 
 .create-btn:focus-visible,
 .ghost-btn:focus-visible {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 </style>

@@ -364,7 +364,7 @@ function milestonesOf(stageId: string): MilestoneItem[] {
   gap: 9px;
   margin: 0;
 
-  color: #202b40;
+  color: var(--ink-1);
   font-size: 17px;
   font-weight: 650;
 }
@@ -374,8 +374,8 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 
   border-radius: 5px;
 
-  background: #f2f4f9;
-  color: #4a5568;
+  background: var(--surface-muted);
+  color: var(--ink-2);
 
   font-size: 11px;
   font-weight: 700;
@@ -383,7 +383,7 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 
 .panel-sub {
   margin: 6px 0 0;
-  color: #8490a3;
+  color: var(--ink-3);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -397,9 +397,9 @@ function milestonesOf(stageId: string): MilestoneItem[] {
   padding: 0 15px;
 
   border: none;
-  border-radius: 9px;
+  border-radius: var(--radius-pill);
 
-  background: #4f46e5;
+  background: var(--brand);
   color: #fff;
 
   font-size: 13px;
@@ -408,7 +408,7 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 }
 
 .create-btn:hover {
-  background: #4338ca;
+  background: var(--brand-strong);
 }
 
 .plus {
@@ -418,7 +418,7 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 
 .hint {
   margin: 0;
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 13px;
 }
 
@@ -426,10 +426,10 @@ function milestonesOf(stageId: string): MilestoneItem[] {
   padding: 34px 20px;
   margin: 0;
 
-  border: 1px dashed #dfe4ee;
-  border-radius: 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
 
-  color: #8a94a6;
+  color: var(--ink-3);
   font-size: 13px;
   text-align: center;
 }
@@ -451,8 +451,8 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 
   padding: 16px 18px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
 
   background: #fff;
 }
@@ -468,8 +468,8 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 
   border-radius: 8px;
 
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
 
   font-size: 13px;
   font-weight: 700;
@@ -500,7 +500,7 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 
 .stage-title {
   margin: 0;
-  color: #263248;
+  color: var(--ink-1);
   font-size: 15px;
   font-weight: 600;
 }
@@ -514,25 +514,25 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 .ghost-btn {
   padding: 5px 10px;
 
-  border: 1px solid #dce2eb;
-  border-radius: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
 
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 
   font-size: 12px;
   cursor: pointer;
 }
 
 .ghost-btn:hover {
-  border-color: #c5ccda;
-  background: #f8f9fc;
+  border-color: var(--line-strong);
+  background: var(--surface-muted);
 }
 
 .ghost-btn--primary {
   border-color: #cfd4fb;
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
   font-weight: 600;
 }
 
@@ -541,13 +541,13 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 }
 
 .ghost-btn--danger {
-  border-color: #f0dada;
-  color: #c04141;
+  border-color: #f7dada;
+  color: #bf3a40;
 }
 
 .ghost-btn--danger:hover {
   border-color: #e8c3c3;
-  background: #fff6f6;
+  background: var(--rose-soft);
 }
 
 .stage-desc {
@@ -565,7 +565,7 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 }
 
 .meta-text {
-  color: #a0a9b7;
+  color: var(--ink-4);
   font-size: 12px;
 }
 
@@ -585,20 +585,20 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 }
 
 .milestone-label {
-  color: #4a5568;
+  color: var(--ink-2);
   font-size: 12px;
   font-weight: 600;
 }
 
 .count {
   margin-left: 5px;
-  color: #a0a9b7;
+  color: var(--ink-4);
   font-weight: 400;
 }
 
 .milestone-empty {
   margin: 0;
-  color: #a0a9b7;
+  color: var(--ink-4);
   font-size: 12px;
 }
 
@@ -637,7 +637,7 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 .milestone-title {
   overflow: hidden;
 
-  color: #364152;
+  color: var(--ink-2);
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -653,11 +653,11 @@ function milestonesOf(stageId: string): MilestoneItem[] {
   height: 28px;
   padding: 0 6px;
 
-  border: 1px solid #dce2eb;
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
 
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 
   font-family: inherit;
   font-size: 12px;
@@ -669,19 +669,19 @@ function milestonesOf(stageId: string): MilestoneItem[] {
   border: none;
 
   background: transparent;
-  color: #4f46e5;
+  color: var(--brand);
 
   font-size: 12px;
   cursor: pointer;
 }
 
 .link-btn:hover {
-  color: #4338ca;
+  color: var(--brand-strong);
   text-decoration: underline;
 }
 
 .link-btn--danger {
-  color: #c04141;
+  color: #bf3a40;
 }
 
 .link-btn--danger:hover {
@@ -690,7 +690,7 @@ function milestonesOf(stageId: string): MilestoneItem[] {
 
 .confirm-text {
   margin: 0;
-  color: #364152;
+  color: var(--ink-2);
   font-size: 14px;
   line-height: 1.7;
 }

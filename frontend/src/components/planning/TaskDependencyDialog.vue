@@ -181,7 +181,7 @@ async function removeDependency(dependsOnTaskId: string): Promise<void> {
 .dep-heading {
   margin: 0;
 
-  color: #364152;
+  color: var(--ink-2);
   font-size: 13px;
   font-weight: 600;
 }
@@ -205,16 +205,16 @@ async function removeDependency(dependsOnTaskId: string): Promise<void> {
 
   padding: 9px 12px;
 
-  border: 1px solid #e9edf4;
+  border: 1px solid var(--line);
   border-radius: 8px;
 
-  background: #fbfcfe;
+  background: var(--surface-muted);
 }
 
 .dep-title {
   overflow: hidden;
 
-  color: #364152;
+  color: var(--ink-2);
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -225,11 +225,11 @@ async function removeDependency(dependsOnTaskId: string): Promise<void> {
 
   padding: 4px 9px;
 
-  border: 1px solid #f0dada;
+  border: 1px solid #f7dada;
   border-radius: 6px;
 
-  background: #fff6f6;
-  color: #c04141;
+  background: var(--rose-soft);
+  color: #bf3a40;
 
   font-size: 12px;
   cursor: pointer;

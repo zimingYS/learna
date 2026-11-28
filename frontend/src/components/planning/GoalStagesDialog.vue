@@ -163,10 +163,10 @@ async function handleSubmit(): Promise<void> {
 
   padding: 10px 12px;
 
-  border: 1px solid #e9edf4;
+  border: 1px solid var(--line);
   border-radius: 9px;
 
-  background: #fbfcfe;
+  background: var(--surface-muted);
 }
 
 .link-main {
@@ -175,7 +175,7 @@ async function handleSubmit(): Promise<void> {
   align-items: center;
   gap: 9px;
 
-  color: #364152;
+  color: var(--ink-2);
   font-size: 14px;
   cursor: pointer;
 }
@@ -183,12 +183,12 @@ async function handleSubmit(): Promise<void> {
 .link-main input {
   width: 15px;
   height: 15px;
-  accent-color: #4f46e5;
+  accent-color: var(--brand);
   cursor: pointer;
 }
 
 .link-seq {
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -203,11 +203,11 @@ async function handleSubmit(): Promise<void> {
   height: 32px;
   padding: 0 8px;
 
-  border: 1px solid #dce2eb;
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
 
   background: #fff;
-  color: #364152;
+  color: var(--ink-2);
 
   font-family: inherit;
   font-size: 12px;

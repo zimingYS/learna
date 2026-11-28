@@ -262,14 +262,14 @@ function ownerLabel(task: TaskItem): string {
 
 .panel-title {
   margin: 0;
-  color: #202b40;
+  color: var(--ink-1);
   font-size: 17px;
   font-weight: 650;
 }
 
 .panel-sub {
   margin: 6px 0 0;
-  color: #8490a3;
+  color: var(--ink-3);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -283,9 +283,9 @@ function ownerLabel(task: TaskItem): string {
   padding: 0 15px;
 
   border: none;
-  border-radius: 9px;
+  border-radius: var(--radius-pill);
 
-  background: #4f46e5;
+  background: var(--brand);
   color: #fff;
 
   font-size: 13px;
@@ -294,7 +294,7 @@ function ownerLabel(task: TaskItem): string {
 }
 
 .create-btn:hover {
-  background: #4338ca;
+  background: var(--brand-strong);
 }
 
 .plus {
@@ -311,8 +311,8 @@ function ownerLabel(task: TaskItem): string {
 
   padding: 7px 10px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
 
   background: #fff;
 }
@@ -327,35 +327,35 @@ function ownerLabel(task: TaskItem): string {
   padding: 6px 12px;
 
   border: none;
-  border-radius: 7px;
+  border-radius: var(--radius-pill);
 
   background: transparent;
-  color: #6b7488;
+  color: var(--ink-3);
 
   font-size: 12px;
   cursor: pointer;
 }
 
 .tab:hover {
-  background: #f4f6fc;
-  color: #4f46e5;
+  background: var(--surface-muted);
+  color: var(--brand);
 }
 
 .tab--active {
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
   font-weight: 600;
 }
 
 .total {
   padding-right: 4px;
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 12px;
 }
 
 .hint {
   margin: 0;
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 13px;
 }
 
@@ -363,10 +363,10 @@ function ownerLabel(task: TaskItem): string {
   padding: 34px 20px;
   margin: 0;
 
-  border: 1px dashed #dfe4ee;
-  border-radius: 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
 
-  color: #8a94a6;
+  color: var(--ink-3);
   font-size: 13px;
   text-align: center;
 }
@@ -391,8 +391,8 @@ function ownerLabel(task: TaskItem): string {
 
   padding: 12px 15px;
 
-  border: 1px solid #e9edf4;
-  border-radius: 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
 
   background: #fff;
 }
@@ -419,8 +419,8 @@ function ownerLabel(task: TaskItem): string {
 
   border-radius: 5px;
 
-  background: #f2f4f9;
-  color: #6b7385;
+  background: var(--surface-muted);
+  color: var(--ink-3);
 
   font-size: 11px;
   font-weight: 700;
@@ -432,19 +432,19 @@ function ownerLabel(task: TaskItem): string {
 }
 
 .priority--5 {
-  background: #fdeeee;
-  color: #c04141;
+  background: var(--rose-soft);
+  color: #bf3a40;
 }
 
 .task-title {
-  color: #263248;
+  color: var(--ink-1);
   font-size: 14px;
   font-weight: 500;
   line-height: 1.5;
 }
 
 .task-title--done {
-  color: #98a1b2;
+  color: var(--ink-3);
   text-decoration: line-through;
 }
 
@@ -464,7 +464,7 @@ function ownerLabel(task: TaskItem): string {
 }
 
 .meta-text {
-  color: #a0a9b7;
+  color: var(--ink-4);
   font-size: 12px;
 }
 
@@ -473,16 +473,16 @@ function ownerLabel(task: TaskItem): string {
 
   border-radius: 5px;
 
-  background: #f2f4f9;
-  color: #6b7385;
+  background: var(--surface-muted);
+  color: var(--ink-3);
 
   font-size: 11px;
   font-weight: 600;
 }
 
 .due-chip--overdue {
-  background: #fdeeee;
-  color: #c04141;
+  background: var(--rose-soft);
+  color: #bf3a40;
 }
 
 .task-actions {
@@ -496,11 +496,11 @@ function ownerLabel(task: TaskItem): string {
   height: 30px;
   padding: 0 7px;
 
-  border: 1px solid #dce2eb;
-  border-radius: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
 
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 
   font-family: inherit;
   font-size: 12px;
@@ -512,7 +512,7 @@ function ownerLabel(task: TaskItem): string {
   border: none;
 
   background: transparent;
-  color: #4f46e5;
+  color: var(--brand);
 
   font-size: 12px;
   cursor: pointer;
@@ -523,7 +523,7 @@ function ownerLabel(task: TaskItem): string {
 }
 
 .link-btn--danger {
-  color: #c04141;
+  color: #bf3a40;
 }
 
 .pagination-footer {
@@ -535,16 +535,16 @@ function ownerLabel(task: TaskItem): string {
 
   padding-top: 14px;
 
-  border-top: 1px solid #eceff5;
+  border-top: 1px solid var(--line);
 }
 
 .pagination-info {
-  color: #98a1b2;
+  color: var(--ink-3);
   font-size: 12px;
 }
 
 .pagination-info strong {
-  color: #4a5568;
+  color: var(--ink-2);
 }
 
 .pagination {
@@ -556,19 +556,19 @@ function ownerLabel(task: TaskItem): string {
   min-height: 32px;
   padding: 0 12px;
 
-  border: 1px solid #dce2eb;
-  border-radius: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
 
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 
   font-size: 12px;
   cursor: pointer;
 }
 
 .page-btn:hover:not(:disabled) {
-  border-color: #c5ccda;
-  background: #f8f9fc;
+  border-color: var(--line-strong);
+  background: var(--surface-muted);
 }
 
 .page-btn:disabled {
@@ -578,7 +578,7 @@ function ownerLabel(task: TaskItem): string {
 
 .confirm-text {
   margin: 0;
-  color: #364152;
+  color: var(--ink-2);
   font-size: 14px;
   line-height: 1.7;
 }

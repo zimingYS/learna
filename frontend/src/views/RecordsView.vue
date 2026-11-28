@@ -6,7 +6,7 @@
         <div class="header-content">
           <div class="header-title">
             <h1>学习记录</h1>
-            <p>页面描述</p>
+            <p>记录每次学习的主题、时长与要点，积累可回顾的成长轨迹。</p>
           </div>
           <button class="btn btn-primary create-btn" @click="openCreate">
             <span class="plus-icon">+</span>
@@ -541,9 +541,7 @@ onMounted(() => {
 
 .records-page {
   min-height: 100%;
-  padding: 40px 28px;
-  background: #f5f7fb;
-  color: #263248;
+  color: var(--ink-1);
 }
 
 .records-container {
@@ -571,7 +569,7 @@ onMounted(() => {
 
 .header-title h1 {
   margin: 0;
-  color: #202b40;
+  color: var(--ink-1);
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.5px;
@@ -579,7 +577,7 @@ onMounted(() => {
 
 .header-title p {
   margin: 9px 0 0;
-  color: #8490a3;
+  color: var(--ink-3);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -594,7 +592,7 @@ onMounted(() => {
   gap: 8px;
   padding: 0 18px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -611,25 +609,25 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: #4f46e5;
+  background: var(--brand);
   color: #fff;
   box-shadow: 0 2px 5px rgb(79 70 229 / 15%);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #4338ca;
+  background: var(--brand-strong);
   transform: translateY(-1px);
 }
 
 .btn-secondary {
-  border-color: #dce2eb;
+  border-color: var(--line-strong);
   background: #fff;
-  color: #596579;
+  color: var(--ink-2);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: #c5ccda;
-  background: #f8f9fc;
+  border-color: var(--line-strong);
+  background: var(--surface-muted);
 }
 
 .plus-icon {
@@ -647,10 +645,10 @@ onMounted(() => {
 .form-card {
   margin-bottom: 24px;
   padding: 26px;
-  border: 1px solid #e9edf4;
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
   background: #fff;
-  box-shadow: 0 3px 12px rgb(31 45 72 / 4%);
+  box-shadow: var(--shadow-sm);
 }
 
 .section-header {
@@ -663,7 +661,7 @@ onMounted(() => {
 
 .section-header h2 {
   margin: 0;
-  color: #263248;
+  color: var(--ink-1);
   font-size: 19px;
   font-weight: 650;
 }
@@ -678,7 +676,7 @@ onMounted(() => {
   flex-shrink: 0;
   padding: 5px 10px;
   border-radius: 5px;
-  background: #eef0ff;
+  background: var(--brand-soft);
   color: #5148ca;
   font-size: 12px;
   font-weight: 500;
@@ -703,19 +701,19 @@ onMounted(() => {
 }
 
 .form-group label {
-  color: #364152;
+  color: var(--ink-2);
   font-size: 13px;
   font-weight: 600;
 }
 
 .required {
   margin-left: 3px;
-  color: #e05252;
+  color: var(--rose);
 }
 
 .optional {
   margin-left: 5px;
-  color: #a0a9b7;
+  color: var(--ink-4);
   font-size: 12px;
   font-weight: 400;
 }
@@ -723,11 +721,11 @@ onMounted(() => {
 .form-group input,
 .form-group textarea {
   width: 100%;
-  border: 1px solid #dce2eb;
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
   outline: none;
   background: #fff;
-  color: #263248;
+  color: var(--ink-1);
   font-family: inherit;
   font-size: 14px;
   transition: border-color 0.2s,
@@ -759,7 +757,7 @@ onMounted(() => {
 
 .form-group input:disabled,
 .form-group textarea:disabled {
-  background: #f8f9fc;
+  background: var(--surface-muted);
   cursor: not-allowed;
 }
 
@@ -845,10 +843,10 @@ onMounted(() => {
 
 .list-card {
   overflow: hidden;
-  border: 1px solid #e9edf4;
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
   background: #fff;
-  box-shadow: 0 3px 12px rgb(31 45 72 / 4%);
+  box-shadow: var(--shadow-sm);
 }
 
 .list-header {
@@ -860,7 +858,7 @@ onMounted(() => {
 
 .list-header h2 {
   margin: 0;
-  color: #263248;
+  color: var(--ink-1);
   font-size: 18px;
   font-weight: 650;
 }
@@ -878,7 +876,7 @@ onMounted(() => {
 }
 
 .count-number {
-  color: #4f46e5;
+  color: var(--brand);
   font-size: 23px;
   font-weight: 700;
 }
@@ -903,14 +901,14 @@ onMounted(() => {
 }
 
 .records-table thead {
-  background: #f8f9fc;
+  background: var(--surface-muted);
 }
 
 .records-table th {
   height: 46px;
   padding: 0 15px;
-  border-top: 1px solid #edf0f5;
-  border-bottom: 1px solid #edf0f5;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   color: #7c8799;
   font-size: 12px;
   font-weight: 600;
@@ -1040,7 +1038,7 @@ onMounted(() => {
 }
 
 .edit-btn {
-  color: #5148d1;
+  color: var(--brand-strong);
 }
 
 .edit-btn:hover:not(:disabled) {
@@ -1077,7 +1075,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 19px;
-  background: #eef0ff;
+  background: var(--brand-soft);
   color: #625be1;
 }
 
@@ -1122,7 +1120,7 @@ onMounted(() => {
   height: 15px;
   flex-shrink: 0;
   border: 2px solid #e0e3f7;
-  border-top-color: #5148d1;
+  border-top-color: var(--brand-strong);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -1141,7 +1139,7 @@ onMounted(() => {
   justify-content: space-between;
   gap: 15px;
   padding: 17px 24px;
-  border-top: 1px solid #edf0f5;
+  border-top: 1px solid var(--line);
 }
 
 .pagination-info {
@@ -1187,7 +1185,7 @@ onMounted(() => {
 
 .page-btn:hover:not(:disabled) {
   border-color: #7771ec;
-  color: #5148d1;
+  color: var(--brand-strong);
 }
 
 .page-btn:disabled {
@@ -1208,7 +1206,7 @@ onMounted(() => {
 }
 
 .page-indicator strong {
-  color: #5148d1;
+  color: var(--brand-strong);
   font-weight: 650;
 }
 

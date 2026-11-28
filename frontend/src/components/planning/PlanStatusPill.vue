@@ -25,12 +25,12 @@ defineProps<{ label: string; status: string }>();
 
 .plan-pill--neutral {
   background: #f1f3f8;
-  color: #6b7385;
+  color: var(--ink-3);
 }
 
 .plan-pill--primary {
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 .plan-pill--success {
@@ -44,7 +44,7 @@ defineProps<{ label: string; status: string }>();
 }
 
 .plan-pill--danger {
-  background: #fdeeee;
-  color: #c04141;
+  background: var(--rose-soft);
+  color: #bf3a40;
 }
 </style>

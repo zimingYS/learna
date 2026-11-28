@@ -24,12 +24,12 @@ defineProps<{ status: ProjectStatus }>();
 
 .status-pill--draft {
   background: #f1f3f8;
-  color: #6b7385;
+  color: var(--ink-3);
 }
 
 .status-pill--active {
-  background: #eef1fe;
-  color: #4f46e5;
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 .status-pill--paused {

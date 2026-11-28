@@ -1,6 +1,17 @@
 <template>
   <main class="login-page">
     <section class="auth-card">
+      <div class="auth-brand">
+        <span class="brand-mark">
+          <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round"
+               stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M3 8.5 12 4l9 4.5-9 4.5-9-4.5Z"/>
+            <path d="M7 11v4.6c0 1.3 2.2 2.4 5 2.4s5-1.1 5-2.4V11"/>
+          </svg>
+        </span>
+        <span class="brand-name">Learna</span>
+      </div>
+
       <header class="auth-header">
         <h2 class="auth-title">
           {{ isRegister ? "创建账号" : "欢迎回来" }}
@@ -119,97 +130,164 @@ onMounted(() => {
 
 <style scoped>
 .login-page {
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+
+  min-height: 100vh;
   padding: 24px;
-  background: #f7f8fc;
-  box-sizing: border-box;
+
+  background: var(--canvas-grad);
 }
 
 .auth-card {
   width: 100%;
-  max-width: 360px;
-  padding: 32px;
-  box-sizing: border-box;
-  background: #ffffff;
-  border: 1px solid #e8eaf0;
-  border-radius: 14px;
-  box-shadow: 0 8px 30px rgb(0 0 0 / 5%);
+  max-width: 384px;
+  padding: 34px 32px 30px;
+
+  border: 1px solid var(--line);
+  border-radius: 22px;
+
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  margin-bottom: 22px;
+}
+
+.brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+
+  border-radius: 9px;
+
+  background: linear-gradient(140deg, #6d6df6, var(--brand));
+  box-shadow: 0 6px 14px -6px rgb(79 70 229 / 55%);
+  color: #fff;
+}
+
+.brand-mark svg {
+  width: 18px;
+  height: 18px;
+}
+
+.brand-name {
+  color: var(--ink-1);
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: -0.4px;
 }
 
 .auth-header {
-  margin-bottom: 28px;
+  margin-bottom: 26px;
   text-align: center;
 }
 
 .auth-title {
-  margin: 0 0 10px;
-  font-size: 24px;
-  font-weight: 600;
-  color: #202534;
+  margin: 0 0 8px;
+
+  color: var(--ink-1);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
 }
 
 .auth-description {
   margin: 0;
-  font-size: 13px;
-  color: #9298a8;
+
+  color: var(--ink-3);
+  font-size: 12.5px;
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 
 .form-group label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #454b5c;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
 .form-group input {
   width: 100%;
-  height: 42px;
-  padding: 0 12px;
-  box-sizing: border-box;
-  border: 1px solid #e1e4eb;
-  border-radius: 7px;
+  height: 44px;
+  padding: 0 14px;
+
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   outline: none;
-  font-size: 13px;
-  transition: border-color 0.2s;
+
+  background: var(--surface-muted);
+  color: var(--ink-1);
+
+  font-size: 13.5px;
+
+  transition: border-color 0.18s var(--ease), background-color 0.18s var(--ease),
+  box-shadow 0.18s var(--ease);
+}
+
+.form-group input::placeholder {
+  color: var(--ink-4);
 }
 
 .form-group input:focus {
-  border-color: #647bff;
+  border-color: var(--brand);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--brand-ring);
 }
 
 .submit-btn {
   height: 44px;
-  margin-top: 4px;
+  margin-top: 6px;
+
   border: none;
-  border-radius: 7px;
-  background: #647bff;
-  color: #ffffff;
+  border-radius: var(--radius-pill);
+
+  background: linear-gradient(135deg, #6d6df6, var(--brand));
+  box-shadow: 0 10px 22px -12px rgb(79 70 229 / 85%);
+  color: #fff;
+
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
+
+  transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 
 .submit-btn:hover {
-  background: #5269eb;
+  box-shadow: 0 14px 26px -12px rgb(79 70 229 / 90%);
+  transform: translateY(-1px);
 }
 
 .error-msg {
+  padding: 9px 12px;
   margin: 0;
-  color: #dc4545;
+
+  border: 1px solid #f7dada;
+  border-radius: var(--radius-sm);
+
+  background: var(--rose-soft);
+  color: #bf3a40;
+
   font-size: 12px;
   line-height: 1.5;
 }
@@ -218,21 +296,27 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   gap: 4px;
-  margin-top: 24px;
-  font-size: 13px;
-  color: #9298a8;
+
+  margin-top: 22px;
+
+  color: var(--ink-3);
+  font-size: 12.5px;
 }
 
 .toggle-btn {
   padding: 0;
+
   border: none;
+
   background: none;
-  color: #647bff;
-  font-size: 13px;
+  color: var(--brand);
+
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .toggle-btn:hover {
-  color: #5269eb;
+  color: var(--brand-strong);
 }
 </style>

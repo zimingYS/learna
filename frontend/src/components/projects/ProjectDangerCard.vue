@@ -18,23 +18,23 @@ const emit = defineEmits<{ purge: [] }>();
   padding: 22px 24px;
 
   border: 1px solid #f3dede;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
 
   background: #fff;
-  box-shadow: 0 2px 10px rgb(31 45 72 / 4%);
+  box-shadow: var(--shadow-sm);
 }
 
 .card h2 {
   margin: 0 0 14px;
 
-  color: #263248;
+  color: var(--ink-1);
   font-size: 16px;
   font-weight: 650;
 }
 
 .card-hint {
   margin: 0 0 14px;
-  color: #8490a3;
+  color: var(--ink-3);
   font-size: 12.5px;
   line-height: 1.7;
 }
@@ -44,10 +44,10 @@ const emit = defineEmits<{ purge: [] }>();
   min-height: 40px;
 
   border: 1px solid #f0cdcd;
-  border-radius: 9px;
+  border-radius: var(--radius-pill);
 
-  background: #fff8f8;
-  color: #c04141;
+  background: var(--rose-soft);
+  color: #bf3a40;
 
   font-size: 13.5px;
   font-weight: 600;
@@ -61,7 +61,7 @@ const emit = defineEmits<{ purge: [] }>();
 }
 
 .danger-btn:focus-visible {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
