@@ -1,5 +1,5 @@
 use crate::app_state::AppState;
-use crate::router::{auth, health, learning_record, planning, project};
+use crate::router::{auth, content, health, learning_record, planning, project};
 use crate::shared::middleware::{auth_middleware, request_id_middleware};
 use axum::{Router, middleware};
 
@@ -11,6 +11,9 @@ pub fn build_router(state: AppState) -> Router {
     // 避免每加一个业务模块就复制一遍 layer 调用（漏挂即越权）
     let authed = Router::new()
         .nest("/records", learning_record::router())
+        .nest("/learning-contents", content::contents_router())
+        .nest("/content-tags", content::tags_router())
+        .nest("/project-contents", content::project_contents_router())
         .nest("/projects", projects)
         .layer(middleware::from_fn_with_state(
             state.clone(),

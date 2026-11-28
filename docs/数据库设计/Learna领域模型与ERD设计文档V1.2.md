@@ -38,6 +38,14 @@
 
 文档版本仍为 **V1.2**：内容域与学习活动域的 Migration（`0005` / `0006`）尚未编写，本次新增列与新增小节不构成对既有实现的破坏性变更。
 
+**V1.2 增补记录（2026-11-28，M03 实现期）**
+
+| 变更 | 位置 | 依据 |
+|---|---|---|
+| `ProjectContent` 增 `updated_at` | §5.2 | 契约 §4.4「同态提交不刷新 `updated_at`」——没有该列就无法区分「同态重提交」与「真的改了」，实现期补列 |
+
+> `updated_at` 只用于判定本次更新是否产生变化，**不进** `ProjectContentItem` 响应（契约未暴露该字段）。
+
 **V1.1 变更记录（2026-11-27）**
 
 | 变更 | 位置 | 依据 |
@@ -697,6 +705,8 @@ roadmap（可用部分唯一索引实现）。
   linked_at               TIMESTAMPTZ             NOT NULL
 
   achieved_at             TIMESTAMPTZ             NULL
+
+  updated_at              TIMESTAMPTZ             NOT NULL，实现期补列
   ------------------------------------------------------------------------
 
 约束：`UNIQUE(project_id, content_id)`；项目 owner 必须与内容 owner

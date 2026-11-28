@@ -1,11 +1,11 @@
 pub mod ai_task;
 pub mod audit;
 pub mod auth;
-pub mod knowledge;
+pub mod content;
 pub mod learning_record;
-pub mod library;
 pub mod plan_change;
 pub mod project;
+pub mod project_content;
 pub mod report;
 pub mod roadmap;
 pub mod schedule;

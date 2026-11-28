@@ -19,6 +19,11 @@ const navItems: { to: string; label: string; paths: string[] }[] = [
     ],
   },
   {
+    to: "/contents",
+    label: "学习内容",
+    paths: ["M12 3 3 8l9 5 9-5-9-5Z", "M3 14l9 5 9-5"],
+  },
+  {
     to: "/roadmaps",
     label: "规划工作台",
     paths: ["m9 4 6 2 6-2v12l-6 2-6-2-6 2V6Z", "M9 4v12M15 6v12"],

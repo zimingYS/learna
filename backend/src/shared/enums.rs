@@ -181,3 +181,64 @@ string_enum! {
         FinishToStart => "finish_to_start",
     }
 }
+
+string_enum! {
+    /// 学习内容类型（D-23：只保留 ERD 三值，子类型 v1 不入模型）
+    ContentType {
+        KnowledgePoint => "knowledge_point",
+        SkillPoint => "skill_point",
+        LanguageItem => "language_item",
+    }
+}
+
+string_enum! {
+    /// 内容状态；归档由 DELETE 驱动，不提供取消归档
+    ContentStatus {
+        Active => "active",
+        Archived => "archived",
+    }
+}
+
+string_enum! {
+    /// 正文解释方式（ADR-009 §1）；未知值按 `plain_text` 渲染，不报 500
+    BodyFormat {
+        Markdown => "markdown",
+        PlainText => "plain_text",
+    }
+}
+
+string_enum! {
+    /// 内容创建来源。
+    ///
+    /// 与阶段/路线的 [`CreatedSource`] **刻意不同**（ADR-009 §7）：内容的 AI 产物只在
+    /// 提案被接受后落库，落库即已确认，不存在未确认态。
+    ContentCreatedSource {
+        User => "user",
+        AiConfirmed => "ai_confirmed",
+        Template => "template",
+    }
+}
+
+string_enum! {
+    /// 内容关系类型；`prerequisite` 有向且禁环，对称关系也只存一行（D-25）
+    RelationType {
+        Prerequisite => "prerequisite",
+        Related => "related",
+        Contains => "contains",
+        Extends => "extends",
+        Alternative => "alternative",
+    }
+}
+
+string_enum! {
+    /// 内容在项目中的上下文状态（D-27）。
+    ///
+    /// `Achieved` 只能由 M06 评价流程写入；用户提交该值由服务层转 409。
+    ProjectContentStatus {
+        NotStarted => "not_started",
+        Learning => "learning",
+        Reviewing => "reviewing",
+        Achieved => "achieved",
+        Waived => "waived",
+    }
+}

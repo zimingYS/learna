@@ -19,9 +19,9 @@ info:
       reactivate` 四动作端点，`pending` 不能直接 `complete`（须先 `start`），回退目标固定为 `active`。
     - **契约最小承诺**（ADR-007）：`completion_rule` / `target_definition` 等无生产者的 JSONB 字段
       不进契约；软删除标记 `deleted_at` 不对外暴露；列表默认序固定，不提供 `sort` 参数。
-    - 学习内容模块（learning-contents / content-tags / project-contents）为**已设计、未实现**
-      （x-learna-status: designed），依据见 docs/接口契约/设计记录/内容与知识库契约设计.md；
-      7 项决策已落定（D-23 ~ D-29），无待决策项。
+    - 学习内容模块（learning-contents / content-tags / project-contents）**后端已实现**（2026-11-28），
+      依据见 docs/接口契约/设计记录/内容与知识库契约设计.md；7 项决策已落定（D-23 ~ D-29），
+      无待决策项。`x-learna-status` 仍为 designed，表示契约已冻结；实现进度以接口清单为准。
     - 正文模型按 ADR-009：`body` 是 Markdown / 纯文本**源文本**，后端不渲染不净化；列表接口
       不返回 `body`，只有详情返回；`metadata` 在 v1 不可读写，出现即 422；内容域不带附件
       （附件归 M09 成果 / M05 证据）。
