@@ -29,13 +29,3 @@ pub struct UserResponse {
     pub(crate) email: String,
     pub(crate) display_name: String,
 }
-
-impl UserResponse {
-    pub fn from_row(id: i64, email: String, display_name: String) -> Self {
-        Self {
-            id: id.to_string(),
-            email,
-            display_name,
-        }
-    }
-}

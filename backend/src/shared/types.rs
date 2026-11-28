@@ -30,10 +30,6 @@ impl RequestId {
     pub fn as_str(&self) -> &str {
         &self.0
     }
-
-    pub fn into_inner(self) -> String {
-        self.0
-    }
 }
 
 impl Default for RequestId {

@@ -8,8 +8,8 @@ use sqlx::types::chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use crate::shared::{
-    AppError, AppResult, CompletionMethod, Contribution, CreatedSource, GoalStatus, GoalType,
-    MilestoneStatus, RoadmapSource, RoadmapStatus, StageStatus, double_option,
+    AppError, AppResult, CompletionMethod, Contribution, GoalStatus, GoalType, MilestoneStatus,
+    RoadmapSource, RoadmapStatus, StageStatus, double_option,
 };
 
 // ---------------------------------------------------------------------------
@@ -413,9 +413,4 @@ impl MilestoneQuery {
         let page_size = self.page_size.unwrap_or(10).clamp(1, 100);
         (page_size, (page - 1) * page_size)
     }
-}
-
-/// 供任务模块复用：把 DB 字面值转创建来源枚举
-pub fn parse_created_source(value: &str) -> AppResult<CreatedSource> {
-    CreatedSource::parse(value)
 }

@@ -79,13 +79,6 @@ export const GOAL_TYPE_OPTIONS: { value: GoalType; label: string }[] = [
   { value: "completion", label: GOAL_TYPE_LABELS.completion },
 ];
 
-export const GOAL_STATUS_OPTIONS: { value: GoalStatus | "all"; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "active", label: GOAL_STATUS_LABELS.active },
-  { value: "achieved", label: GOAL_STATUS_LABELS.achieved },
-  { value: "cancelled", label: GOAL_STATUS_LABELS.cancelled },
-];
-
 export const TASK_STATUS_OPTIONS: { value: TaskStatus | "all"; label: string }[] = [
   { value: "all", label: "全部" },
   { value: "todo", label: TASK_STATUS_LABELS.todo },
