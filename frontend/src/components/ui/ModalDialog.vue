@@ -67,16 +67,17 @@ onBeforeUnmount(() => {
   inset: 0;
   padding: 64px 20px 40px;
 
-  background: rgb(18 26 43 / 45%);
+  background: rgb(20 28 52 / 38%);
+  backdrop-filter: blur(3px);
 }
 
 .modal-panel {
   width: 100%;
   max-width: 560px;
-  border: 1px solid #e9edf4;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 24px 60px rgb(20 30 55 / 18%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
 }
 
 .modal-header {
@@ -86,20 +87,21 @@ onBeforeUnmount(() => {
   gap: 16px;
 
   padding: 24px 26px 18px;
-  border-bottom: 1px solid #f0f3f8;
+  border-bottom: 1px solid var(--line);
 }
 
 .modal-heading h2 {
   margin: 0;
-  color: #202b40;
-  font-size: 18px;
+  color: var(--ink-1);
+  font-size: 17px;
   font-weight: 650;
+  letter-spacing: -0.2px;
 }
 
 .modal-heading p {
-  margin: 7px 0 0;
-  color: #8490a3;
-  font-size: 13px;
+  margin: 6px 0 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
   line-height: 1.6;
 }
 
@@ -111,10 +113,10 @@ onBeforeUnmount(() => {
   padding: 0;
 
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
 
   background: transparent;
-  color: #8c96a8;
+  color: var(--ink-4);
 
   font-size: 20px;
   line-height: 1;
@@ -124,12 +126,12 @@ onBeforeUnmount(() => {
 }
 
 .modal-close:hover {
-  background: #f3f5fa;
-  color: #495368;
+  background: var(--surface-muted);
+  color: var(--ink-2);
 }
 
 .modal-close:focus-visible {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 

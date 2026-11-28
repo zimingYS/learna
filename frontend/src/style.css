@@ -1,13 +1,79 @@
+@import "./styles/tokens.css";
 @import "./styles/forms.css";
 
-body {
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-width: 320px;
+  min-height: 100%;
   margin: 0;
 }
 
 body {
-  font-family: system-ui, sans-serif;
+  color: var(--ink-1);
+  background: var(--canvas);
+
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-* {
-  box-sizing: border-box;
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* 标题默认色，视图内若有专属样式再覆盖 */
+h1,
+h2,
+h3 {
+  color: var(--ink-1);
+}
+
+::selection {
+  background: rgb(79 70 229 / 16%);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* 细滚动条，避免打断卡片的留白 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--radius-pill);
+  background: #d7ddee;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c3cbe0;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }
